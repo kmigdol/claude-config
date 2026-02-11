@@ -1,0 +1,43 @@
+# Sensitive credentials
+google_sheets_token.json
+
+# Conversation history
+history.jsonl
+
+# Ephemeral/generated data
+cache/
+debug/
+downloads/
+file-history/
+ide/
+paste-cache/
+plans/
+plugins/
+session-env/
+shell-snapshots/
+stats-cache.json
+statsig/
+tasks/
+teams/
+telemetry/
+todos/
+usage-data/
+config/
+
+# Projects - only keep memory/ dirs, ignore everything else
+projects/**/*.jsonl
+projects/**/subagents/
+projects/**/scratchpads/
+projects/**/shared-history/
+projects/**/tool-results/
+# Worktree project dirs (no memory worth tracking)
+projects/-Users-kayleigh--claude-worktrees-*/
+
+# Image cache
+image-cache/
+
+# Session indexes
+**/sessions-index.json
+
+# OS files
+.DS_Store
