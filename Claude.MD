@@ -12,6 +12,14 @@ If there's even a 1% chance a skill applies, invoke it with the `Skill` tool. Do
 
 When implementing tasks from a task list, **use subagents** (`Task` tool, `subagent_type: "general-purpose"`) instead of doing each task sequentially yourself. Dispatch independent tasks in parallel. Include full context in each subagent prompt: worktree path, files to modify, acceptance criteria, and TDD instructions. See the `starting-linear-ticket` skill Step 6 for the prompt template.
 
+### Agent Instructions for Framework-Specific Tasks
+
+When spawning explore or implementation agents that analyze framework-specific code (middleware, config, routing, etc.), always include:
+
+> Check the installed version of the framework in package.json or node_modules before making claims about conventions. If anything doesn't match expected patterns, use WebSearch to look up docs for that specific version. Do NOT rely on training knowledge for framework conventions — flag uncertainty rather than asserting code is broken.
+
+This prevents agents from confidently misidentifying newer patterns (e.g., Next.js 16's `proxy.ts`) as broken code.
+
 ---
 
 ## Clarify Before Acting
@@ -34,28 +42,13 @@ Do NOT rationalize skipping this ("it's probably X", "I'll just try this approac
 
 ## Investigate Before Proposing Fixes
 
-**Do not propose fixes based on assumptions.** Investigate fully first.
-
-When debugging an issue or error, your investigation MUST include all 4 steps before suggesting any fix:
-1. **Reproduce the error** — run the failing command/test and capture the actual output
-2. **Read all relevant source files** — don't skim, read the full context of the affected code paths
-3. **Check recent git changes** to affected files — `git log --oneline -10 <file>` to understand what changed recently
-4. **Propose 2-3 ranked hypotheses with evidence** — each hypothesis must cite specific code/output, not guesses
-
-Do not stop until all 4 steps are done. Do not skip to a fix after step 1.
+**REQUIRED:** Use the `superpowers:systematic-debugging` skill when encountering any bug, test failure, or unexpected behavior. Do not propose fixes without completing its investigation phases first.
 
 ---
 
 ## Verify APIs and Library Versions
 
-**Do not assume API patterns are current.** Libraries change between versions.
-
-Before using any framework or library API:
-1. **Check the installed version** (`pip show <package>`, `pnpm list <package>`, etc.)
-2. **Verify the API matches that version** — check docs, changelogs, or source code in `node_modules`/site-packages
-3. If unsure, **read the actual source** rather than relying on memory of older patterns
-
-This especially applies to: Dagster, LangGraph, assistant-ui, Next.js, and any rapidly-evolving library.
+**REQUIRED:** Use the `verify-library-api` skill before using any framework/library API. Do not assume API patterns are current — libraries change between versions. This especially applies to: Dagster, LangGraph, assistant-ui, Next.js.
 
 ---
 
@@ -211,3 +204,17 @@ If Supabase MCP tools consistently timeout:
 When completing tasks, update:
 1. **Linear** - Status to "Done", add PR link to description
 2. **Docs** - Update CLAUDE.md if behavior changed
+
+---
+
+## Pushing Configuration Changes
+
+**After modifying files in `~/.claude/`** (CLAUDE.md, skills, project settings):
+
+The `~/.claude/` directory is a separate git repo (`kmigdol/claude-config`). Changes must be pushed there (not to project repos):
+
+```bash
+cd ~/.claude && git add -A && git commit -m "<description>" && git push
+```
+
+**Note:** Git tracks the file as `Claude.MD` (not `CLAUDE.md`).
