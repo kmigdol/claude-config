@@ -17,6 +17,7 @@
 ## Workflow
 
 - [Worktree setup](worktree-setup.md) - Location, env file copy, pnpm, cleanup steps
+- **Claude config repo**: `kmigdol/claude-config` at `~/.claude/` — separate git repo for global CLAUDE.md, skills, and project settings. Push changes there (not to NextBest). Note: git tracks the file as `Claude.MD` (not `CLAUDE.md`).
 
 ## Patterns
 

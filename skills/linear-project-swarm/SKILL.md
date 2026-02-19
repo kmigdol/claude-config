@@ -124,45 +124,18 @@ Do NOT proceed to implementation until the team lead approves your criteria.
 
 ## Phase 2: Implementation (after approval)
 
-Once your acceptance criteria are approved:
+Once your acceptance criteria are approved, follow the `starting-linear-ticket`
+skill workflow with these modifications:
 
-1. Create a worktree:
-   git worktree add {WORKTREE_PATH} -b {BRANCH_NAME} origin/main
+- **Skip Steps 1-2** (fetch ticket, mark In Progress) — the lead already did this.
+- **Skip Step 4** (brainstorm) — use the approved acceptance criteria as your design.
+- **Start at Step 3** (create worktree) and continue through Step 11.
+  - Worktree: git worktree add {WORKTREE_PATH} -b {BRANCH_NAME} origin/main
+  - socialgpt-dagster is a separate repo at ~/PycharmProjects/NextBest/socialgpt-dagster
+    — create worktrees FROM that repo's directory, not NextBest.
 
-2. Run setup for the target repo:
-   - socialgpt-frontend: cd {WORKTREE_PATH}/socialgpt-frontend && pnpm install
-   - socialgpt: cd {WORKTREE_PATH}/socialgpt && uv sync
-   - socialgpt-dagster: This is a separate repo at ~/PycharmProjects/NextBest/socialgpt-dagster
-     Create worktree FROM that repo's directory.
-
-3. Implement using TDD — write failing tests first, then implement
-
-4. Run ALL verification before committing:
-   - Run all tests and verify they pass
-   - Run TypeScript check: pnpm exec tsc --noEmit (frontend)
-   - Run build: pnpm run build (frontend) or dagster definitions validate (dagster)
-   Fix any failures before proceeding.
-
-5. Commit with message: "{IDENTIFIER}: {description}"
-
-6. Push: git push -u origin {BRANCH_NAME}
-
-7. Create PR:
-   gh pr create --title "{IDENTIFIER}: {TITLE}" --body "..."
-
-8. Wait for CI to pass:
-   gh pr checks <pr-number> --watch
-   If CI fails, read the failure logs, fix the issue, push, and re-check.
-   Do NOT proceed until CI is green.
-
-9. Run code review:
-   Use the Task tool with subagent_type "superpowers:code-reviewer" to review the PR.
-   Fix any Critical or Important issues found, push fixes, and re-check CI.
-
-10. Update Linear issue to "In Review" and add PR link:
-   mcp__linear-server__update_issue with id, state: "In Review", and append PR URL to description
-
-11. Report back: send PR URL, code review summary, and implementation summary to team lead via SendMessage
+After Step 11 (Linear updated to In Review), also:
+- Send PR URL, code review summary, and implementation summary to team lead via SendMessage.
 
 ## Important
 - Check the installed version of frameworks in package.json before making
