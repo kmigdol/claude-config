@@ -21,7 +21,30 @@ An idea, feature request, bug report, or initiative. Can be:
 - A Linear project/milestone to break down
 - A bug report or user feedback
 
-## Workflow
+## Fast Path — Small, Well-Scoped Tickets
+
+**Not every ticket needs the full workflow.** Skip brainstorming and reviews when ALL of these are true:
+
+- The problem is obvious and well-understood (e.g., a specific bug with a known fix)
+- The scope is already tight — one change, one area of the codebase
+- There's no design ambiguity — no "should we do A or B?" questions
+- The user has clearly articulated what they want
+
+**Fast path:** Read the relevant code to understand the current state → create a well-formed ticket with problem statement, affected code, solution sketch, and acceptance criteria. No brainstorming, no CEO review, no Eng review.
+
+**Examples of fast-path tickets:**
+- "Day boundary uses UTC instead of local time" — it's a bug, the fix is clear
+- "Add loading spinner to the save button" — tiny UI improvement, no ambiguity
+- "Rename `foo` to `bar` across the codebase" — mechanical refactor
+
+**Examples that need the full workflow:**
+- "Add Google Calendar integration" — multiple approaches, scope unclear
+- "Redesign the daily routine flow" — requires exploring alternatives
+- "Add a weekly review feature" — new concept, needs CEO + Eng review
+
+**When in doubt, ask:** "This seems well-scoped enough for a quick ticket. Want me to run the full workflow or just create the ticket?"
+
+## Workflow (Full)
 
 ```dot
 digraph workflow {
