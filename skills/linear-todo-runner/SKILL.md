@@ -191,7 +191,7 @@ When an agent completes and reports its PR:
 **Do this per-PR as they finish** — don't wait for all agents to complete.
 
 **After merging, check for conflicts on other open PRs:**
-Run `gh pr view <number> --json mergeable --jq '.mergeable'` for each open PR. If any show `CONFLICTING`, notify the relevant agent to rebase/merge main into their branch. Don't wait for the user to discover conflicts.
+Run `gh pr view <number> --json mergeable --jq '.mergeable'` for each open PR. If any show `CONFLICTING`, **send the rebase instructions to the existing agent** that owns that PR — do NOT spawn a new agent. The original agent is still alive and has full context.
 
 ### Step 10: Fill Freed Slot
 
