@@ -189,10 +189,11 @@ When an agent completes and reports its PR:
 
 After a PR merges:
 1. Check if any blocked tickets are now unblocked (their dependency just merged)
-2. Pick the next eligible ticket from the queue
-3. Spawn a new agent (go to Step 5)
+2. **Re-fetch Todo issues** — the user may have added new tickets during the run. Check for any new Todo issues that weren't in the original queue.
+3. Pick the next eligible ticket from the queue (including any newly added ones)
+4. Spawn a new agent (go to Step 5)
 
-If no eligible tickets remain, wait for running agents to finish.
+**Keep the runner going until ALL Todo tickets are complete** — don't stop after the initial batch. The queue is live and grows as the user adds tickets. Only report final summary when there are truly no more Todo issues and all agents are done.
 
 ### Step 11: Final Report
 
