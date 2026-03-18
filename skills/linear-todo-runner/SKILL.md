@@ -1,19 +1,19 @@
 ---
-name: linear-project-swarm
-description: Use when working on a Linear project milestone with multiple issues — orchestrates a team of agents to work on tickets in parallel with acceptance criteria approval before implementation
+name: linear-todo-runner
+description: Use when wanting to work through multiple Linear tickets — fetches all Todo issues, analyzes dependencies, and orchestrates parallel agents with acceptance criteria approval before implementation
 ---
 
-# Linear Project Swarm
+# Linear Todo Runner
 
 ## Overview
 
-Orchestrate a team of agents to work through a Linear project milestone. Each agent handles one ticket with its own worktree, proposes acceptance criteria for approval, then implements autonomously to PR.
+Work through all Todo tickets in a Linear team. Fetches issues, analyzes dependencies, groups into parallelizable waves by priority, and orchestrates agents — each with its own worktree — pausing for acceptance criteria approval before implementation.
 
 ## When to Use
 
-- A Linear project milestone has 2+ issues ready to work on
-- Issues are independent enough to be parallelized
-- You want to maximize throughput across a milestone
+- 2+ issues in Todo state ready to work on
+- You want to maximize throughput across your backlog
+- User says "run through my tickets", "work my todos", etc.
 
 ## When NOT to Use
 
@@ -24,9 +24,9 @@ Orchestrate a team of agents to work through a Linear project milestone. Each ag
 ## Process
 
 ```dot
-digraph swarm {
+digraph runner {
     rankdir=TB;
-    fetch [label="1. Fetch milestone issues"];
+    fetch [label="1. Fetch Todo issues\n(priority-ordered)"];
     analyze [label="2. Analyze dependencies\nPlan waves"];
     approve_plan [label="3. Present wave plan\nGet user approval"];
     team [label="4. Create team + tasks"];
@@ -42,38 +42,39 @@ digraph swarm {
 }
 ```
 
-### Step 1: Fetch Milestone Issues
+### Step 1: Fetch Todo Issues
 
-**If user specifies a milestone:**
+Fetch all issues with state "Todo" for the team:
+
 ```
-mcp__linear-server__list_issues filtered by project + milestone
+mcp__linear-server__list_issues with team: "<team-name>", state: "Todo"
 ```
 
-**If user specifies only the project:**
-```
-mcp__linear-server__list_milestones → show milestone status
-```
-Recommend the first milestone with incomplete issues. Let user choose.
+Use `get_issue` on each to get full descriptions.
 
-Extract per issue: identifier, title, description, status, priority, labels.
-Skip issues already Done or In Review.
+Sort by Linear priority: Urgent (1) → High (2) → Medium (3) → Low (4).
+
+Extract per issue: identifier, title, full description, priority, labels, project (if any).
 
 ### Step 2: Analyze Dependencies
 
-Group issues into **waves** based on:
+Read every issue's full description. Group into **waves** based on:
 - Explicit blocking relationships in Linear
 - Implicit dependencies from descriptions (e.g., "table must exist before frontend can query it")
-- Repo separation (if multi-repo project)
+- Shared code areas that would cause merge conflicts if worked simultaneously
+- Priority — higher priority issues go in earlier waves
 
-**Wave 1:** Issues with no dependencies — can all start immediately
-**Wave 2+:** Issues that depend on Wave 1 completing
+**Wave 1:** Highest-priority issues with no dependencies — can all start immediately
+**Wave 2+:** Issues that depend on Wave 1 completing, or lower-priority independent issues
+
+Within each wave, cap at 4 agents (resource constraint).
 
 ### Step 3: Present Wave Plan for Approval
 
 Show the user:
-- Which issues are in each wave
-- Which repo each issue targets
-- How many agents will run in parallel
+- Which issues are in each wave, with priority and labels
+- Which area each issue targets (pipeline, frontend, both)
+- How many agents will run in parallel per wave
 - Any dependency reasoning
 
 **Wait for user approval before proceeding.**
@@ -81,7 +82,7 @@ Show the user:
 ### Step 4: Create Team and Tasks
 
 ```
-TeamCreate → team name: "{project-slug}-m{milestone-number}"
+TeamCreate → team name: "todo-runner"
 ```
 
 Create a TaskCreate entry for each issue. Set up `addBlockedBy` relationships matching the wave plan.
@@ -100,7 +101,7 @@ mcp__linear-server__update_issue with id and state: "In Progress"
 ```
 Task tool:
   subagent_type: "general-purpose"
-  team_name: "{team-name}"
+  team_name: "todo-runner"
   name: "agent-{issue-identifier}"  (e.g., "agent-nex-170")
   mode: "default"
 ```
@@ -194,6 +195,7 @@ Shut down team: SendMessage type "shutdown_request" to each agent, then TeamDele
 
 ## Key Rules
 
+- **Priority ordering** — Urgent → High → Medium → Low determines wave placement; higher priority issues go first
 - **Merge before next wave** — do NOT spawn Wave N+1 until Wave N's PRs are reviewed, approved, and merged by the user
 - **Max 4 agents simultaneously** — resource constraints
 - **Each agent gets its own worktree** — no shared workspace
@@ -207,8 +209,9 @@ Shut down team: SendMessage type "shutdown_request" to each agent, then TeamDele
 
 | Step | Action | Tool |
 |------|--------|------|
-| Fetch issues | Get milestone issues | `mcp__linear-server__list_issues` |
-| Analyze | Group into waves | Manual analysis |
+| Fetch issues | Get all Todo issues for team | `mcp__linear-server__list_issues` state: "Todo" |
+| Full descriptions | Get each issue's full text | `mcp__linear-server__get_issue` |
+| Analyze | Group into priority-ordered waves | Manual analysis |
 | Wave plan | Present to user | Direct output |
 | Create team | Set up coordination | `TeamCreate` + `TaskCreate` |
 | Spawn agents | One per issue | `Task` (general-purpose) |
