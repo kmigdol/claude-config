@@ -156,6 +156,11 @@ After Step 11 (Linear updated to In Review), also:
 - If the team lead sends you feedback or fix requests after your PR is submitted,
   push the fix to YOUR branch (the PR branch), NOT to main
 - NEVER mark Linear as "In Review" until CI passes
+- **UI changes require screenshot verification** — whenever you make frontend/UI
+  changes, take a Playwright screenshot BEFORE pushing and verify the result
+  visually. Start a dev server with `railway run npm run dev` (for env vars),
+  then use Playwright to screenshot the affected pages. Share the screenshot
+  path with the team lead. Do NOT push UI changes without visual verification.
 ```
 
 ### Step 6-7: Acceptance Criteria Approval
