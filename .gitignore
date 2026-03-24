@@ -5,15 +5,18 @@ google_sheets_token.json
 history.jsonl
 
 # Ephemeral/generated data
+backups/
 cache/
 debug/
 downloads/
 file-history/
 ide/
+mcp-needs-auth-cache.json
 paste-cache/
 plans/
 plugins/
 session-env/
+sessions/
 shell-snapshots/
 stats-cache.json
 statsig/
@@ -32,6 +35,11 @@ projects/**/shared-history/
 projects/**/tool-results/
 # Worktree project dirs (no memory worth tracking)
 projects/-Users-kayleigh--claude-worktrees-*/
+# Stale projects (content moved to project repos)
+projects/-Users-kayleigh-PycharmProjects-NextBest/
+projects/-Users-kayleigh-dev-Lubo/
+projects/-Users-kayleigh-conductor-workspaces-*/
+projects/-Users-kayleigh-PycharmProjects-NextBest-socialgpt-frontend/
 
 # Image cache
 image-cache/

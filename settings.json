@@ -4,5 +4,6 @@
   },
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true
-  }
+  },
+  "effortLevel": "high"
 }
