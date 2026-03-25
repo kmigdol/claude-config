@@ -167,4 +167,4 @@ Projects can also define their own skills in `.claude/skills/` that override or 
 ## Acknowledgments
 
 - **[superpowers](https://github.com/garyelliot/superpowers)** by [Gary Elliot](https://github.com/garyelliot) — the Claude Code plugin that provides the foundational workflow disciplines (TDD, brainstorming, debugging, code review, worktrees, etc.) that everything here builds on
-- **[gstack](https://github.com/garrytan/gstack)** by [Garry Tan](https://github.com/garrytan) — `plan-review-ceo`, `plan-review-eng`, and `verify-library-api` are adapted from gstack's CEO review, eng review, and "search before building" patterns. The project-level skills `office-hours`, `land-and-deploy`, and `canary` are also based on their gstack counterparts
+- **[gstack](https://github.com/garrytan/gstack)** by [Garry Tan](https://github.com/garrytan) — `plan-review-ceo`, `plan-review-eng`, and `verify-library-api` are adapted from gstack's CEO review, eng review, and "search before building" patterns
