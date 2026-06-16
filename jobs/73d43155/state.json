@@ -1,0 +1,20 @@
+{
+  "state": "working",
+  "detail": "/usage",
+  "tempo": "active",
+  "output": null,
+  "children": null,
+  "linkScanOffset": 0,
+  "template": "claude",
+  "respawnFlags": [],
+  "intent": "/usage",
+  "sessionId": "73d43155-d6b5-444d-af3f-6f3922999852",
+  "resumeSessionId": "73d43155-d6b5-444d-af3f-6f3922999852",
+  "daemonShort": "73d43155",
+  "cwd": "/Users/kayleigh/dev/nextbest",
+  "createdAt": "2026-05-12T18:39:50.844Z",
+  "updatedAt": "2026-05-12T18:39:50.844Z",
+  "firstTerminalAt": null,
+  "originCwd": "/Users/kayleigh/dev/nextbest",
+  "backend": "daemon"
+}

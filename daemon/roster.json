@@ -1,0 +1,57 @@
+{
+  "proto": 1,
+  "supervisorPid": 16879,
+  "updatedAt": 1779228649881,
+  "workers": {
+    "73d43155": {
+      "pid": 98423,
+      "procStart": "Tue May 12 18:17:17 2026",
+      "sessionId": "73d43155-d6b5-444d-af3f-6f3922999852",
+      "rendezvousSock": "/tmp/cc-daemon-501/5e3d15da/rv/73d43155.sock",
+      "ptySock": "/tmp/cc-daemon-501/5e3d15da/spare/108e9afa.pty.sock",
+      "cliVersion": "2.1.139",
+      "startedAt": 1778610346820,
+      "attempt": 1,
+      "cwd": "/Users/kayleigh/dev/nextbest",
+      "dispatch": {
+        "proto": 1,
+        "short": "73d43155",
+        "nonce": "2fae5022",
+        "sessionId": "73d43155-d6b5-444d-af3f-6f3922999852",
+        "createdAt": 1778610346812,
+        "source": "spare",
+        "cwd": "/Users/kayleigh/dev/nextbest",
+        "launch": {
+          "mode": "prompt",
+          "args": [
+            "--session-id",
+            "73d43155-d6b5-444d-af3f-6f3922999852",
+            "--agent",
+            "claude"
+          ]
+        },
+        "env": {},
+        "isolation": "none",
+        "respawnFlags": [
+          "--agent",
+          "claude"
+        ],
+        "agent": "claude",
+        "seed": {
+          "intent": ""
+        },
+        "cols": 213,
+        "rows": 64
+      },
+      "decModes": [
+        1000,
+        1002,
+        1003,
+        1006,
+        2004,
+        1004,
+        2031
+      ]
+    }
+  }
+}

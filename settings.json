@@ -2,11 +2,13 @@
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
+  "permissions": {
+    "defaultMode": "auto"
+  },
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true
   },
   "effortLevel": "high",
-  "permissions": {
-    "defaultMode": "auto"
-  }
+  "theme": "light",
+  "skipAutoPermissionPrompt": true
 }
