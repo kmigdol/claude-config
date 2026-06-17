@@ -7,7 +7,7 @@ description: Use when starting work on a Linear ticket - full workflow from fetc
 
 ## Overview
 
-Complete end-to-end workflow for Linear tickets: fetch → in progress → worktree → brainstorm → task list → TDD → verify → PR → code review → CI → in review.
+Complete end-to-end workflow for Linear tickets: fetch → in progress → worktree → brainstorm → (UI prototype) → task list → TDD → verify → PR → code review → CI → in review.
 
 **Announce at start:** "I'm using the starting-linear-ticket skill to set up for this ticket."
 
@@ -93,6 +93,7 @@ digraph workflow {
     brainstorm [label="4. Brainstorm design\n(legacy ticket)", shape=box];
     eng [label="4. Eng Review (execution)\nrich ticket: skip brainstorm", shape=box];
     fresh [label="4.5. Snapshot Freshness Check\n(rich ticket only)", shape=box];
+    proto [label="4.7. UI Prototype Check\n(if substantial UI)", shape=box, style=dashed];
     todos [label="5. Create task list", shape=box];
     tdd [label="6. Implement with TDD", shape=box];
     verify [label="7. Verify (tests + manual)", shape=box];
@@ -108,7 +109,7 @@ digraph workflow {
     rich -> eng [label="yes"];
     rich -> brainstorm [label="no"];
     brainstorm -> eng;
-    eng -> fresh -> todos;
+    eng -> fresh -> proto -> todos;
     todos -> tdd -> verify -> pr -> codereview -> ci -> localtest -> review -> merge;
 }
 ```
@@ -186,6 +187,20 @@ The Implementation Snapshot in the ticket was captured at ticket-creation time. 
 **If any probe fails:** spawn a Rescue Scout subagent (Agent tool, `subagent_type: "general-purpose"`, brief from `~/.claude/skills/creating-linear-tickets/scout-prompt.md` "Rescue Scout" mode). It refreshes only the broken anchors and writes the refreshed snapshot to `<worktree>/SNAPSHOT.md`. The Linear ticket is NOT updated — the durable spec hasn't changed.
 
 After rescue, the implementing agent uses the refreshed snapshot for the rest of the workflow.
+
+### Step 4.7: UI Prototype Check (conditional — visually substantial UI only)
+
+**When:** The ticket introduces or significantly reworks user-facing UI — a new page, a redesigned surface, new card/list layouts, a non-trivial component. **Skip when:** backend/pipeline-only work, type-only changes, copy tweaks, or small CSS adjustments — the cost isn't worth it there.
+
+**Why:** A 5-minute throwaway prototype catches "this isn't the layout I pictured" *before* you've written components, tests, and an approval flow against the wrong design. Wrong-look corrections after the build are the expensive ones.
+
+**How:**
+1. Build a single self-contained throwaway artifact (one HTML file with inline CSS/JS is usually enough; or a quick Storybook/page stub) that renders the proposed layout. **Use real data where you can** — query the actual DB / API so the look is faithful to production content, not lorem-ipsum. Keep it disposable; this is not production code and gets no tests.
+2. Render it and capture screenshots at **both** the project's desktop and mobile breakpoints (e.g. 1280×800 + 375×812). Drive a real browser (claude-in-chrome MCP or a local static server) — don't reason about the look from the source.
+3. Present the screenshots to the user and **get explicit sign-off on the look** (layout, hierarchy, lanes, wording) before proceeding. Fold any requested changes into the prototype and re-confirm.
+4. Only then continue to the task list. The signed-off prototype becomes the visual reference for implementation — but the production build still follows TDD and the project's UI e2e rules (e.g. `boundingBox()` checks); the prototype does not replace those.
+
+Delegate the prototype build to a subagent when the data is large or the artifact is involved (keeps the dataset out of the lead's context). The lead drives the browser screenshots and the user sign-off.
 
 ### Step 5: Create Task List
 
@@ -402,6 +417,7 @@ Report completion with PR URL.
 | 3 | Create worktree | `superpowers:using-git-worktrees` |
 | 4 | Design Pass (conditional) | If ticket has Verification + Snapshot → `plan-review-eng` only. Else `superpowers:brainstorming` then `plan-review-eng`. |
 | 4.5 | Snapshot Freshness Check (Path A) | Probes from `freshness-check.md`. On failure: Rescue Scout writes `<worktree>/SNAPSHOT.md`. |
+| 4.7 | UI Prototype Check (if substantial UI) | Throwaway prototype with real data → screenshot desktop+mobile → user signs off on the look before TDD |
 | 5 | Create task list | `TaskCreate` + `TaskUpdate` for dependencies |
 | 6 | Implement | Subagents (`Task` tool, `general-purpose`) with TDD |
 | 7 | Verify (unit + E2E + manual) | Subagent (`Bash`) or `superpowers:verification-before-completion` |
@@ -484,6 +500,7 @@ Report completion with PR URL.
 - "I can figure out the acceptance criteria myself"
 - "Unit tests pass, E2E tests can wait"
 - "The code looks fine, I don't need a review"
+- "I'll just build the real UI — a prototype is a waste" (for substantial new UI, prototype + get look sign-off FIRST; wrong-look rebuilds cost far more)
 - "CI will probably pass, I'll mark it In Review now"
 - "I'll do these 3 tickets one at a time" (if they're independent, use a team)
 - "I'll implement each task myself" (dispatch to subagents for parallelism)
