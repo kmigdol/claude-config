@@ -92,6 +92,7 @@ Create a Linear task for non-trivial work: features, bugs, refactors, multi-file
 **Guidelines:**
 - Each ticket should deliver a complete, usable feature when done
 - Include backend + frontend + tests in a single ticket
+- **Include analytics instrumentation in the slice design.** If a ticket changes user-facing behavior, its design must name the metric it intends to move and include the analytics/PostHog events needed to measure it — added in the same slice, not deferred. A behavior change you can't measure isn't a complete slice. "Measure later" reliably becomes "never measured."
 - A user should be able to see/use the result of a completed ticket
 - Don't split by technical layer (API route, component, hook, store) — split by user value
 - It's OK for feature tickets to be larger; use subtasks or task lists within the ticket for tracking
