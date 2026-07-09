@@ -82,6 +82,12 @@ The Linear team name is configured per-project in the project's `.claude/CLAUDE.
 
 Create a Linear task for non-trivial work: features, bugs, refactors, multi-file changes, or anything taking >5 minutes.
 
+**Do NOT create a new ticket for work that's needed to accomplish an existing ticket's goal.** If a piece of work helps accomplish the original goal of a ticket — and you can't accomplish that goal without it — it belongs IN that ticket, even when you discover the need mid-work or after the ticket was (prematurely) closed. Reopen the ticket rather than filing a follow-up. New tickets are only for **genuinely separate/additional outcomes**, not for finishing the one you're on. (Fragmenting goal-completing work across tickets lets the original read "Done" when its goal isn't met and buries the remaining work.)
+
+### Marking a Ticket Done — Verify Every Acceptance Criterion First
+
+**Merging a PR, or the user saying "good to merge," is NOT the same as the ticket being Done.** Before flipping any ticket to Done, re-read its acceptance criteria and confirm **each one is actually met, with evidence** — not vibes. If any AC is unmet (e.g. a coverage/quality metric is only partially there and you're still working it), the ticket stays **In Progress**. "PR merged" ≠ "ACs verified" ≠ "Done". If you catch yourself still working toward the goal after marking Done, you closed too early — reopen it.
+
 ### Ticket Scoping — Vertical, Complete Features
 
 **Tickets should be vertical slices of user-facing functionality, not horizontal layers.**
