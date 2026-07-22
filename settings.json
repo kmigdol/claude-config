@@ -5,11 +5,12 @@
   "permissions": {
     "defaultMode": "auto"
   },
+  "model": "opus[1m]",
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true
   },
   "effortLevel": "high",
+  "tui": "fullscreen",
   "theme": "light",
-  "skipAutoPermissionPrompt": true,
-  "tui": "fullscreen"
+  "skipAutoPermissionPrompt": true
 }
