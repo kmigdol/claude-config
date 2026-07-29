@@ -88,6 +88,12 @@ Create a Linear task for non-trivial work: features, bugs, refactors, multi-file
 
 **Merging a PR, or the user saying "good to merge," is NOT the same as the ticket being Done.** Before flipping any ticket to Done, re-read its acceptance criteria and confirm **each one is actually met, with evidence** — not vibes. If any AC is unmet (e.g. a coverage/quality metric is only partially there and you're still working it), the ticket stays **In Progress**. "PR merged" ≠ "ACs verified" ≠ "Done". If you catch yourself still working toward the goal after marking Done, you closed too early — reopen it.
 
+**A shipped ticket that named a metric goes to `Monitoring`, not `Done`.** Shipping is not the outcome — the metric moving is. On merge, land it in `Monitoring` and leave it there until a human reads the number. `Done` requires shipped AND measured. Only work with nothing to measure (refactors, types, tooling, docs, CI) goes straight to `Done`.
+
+The `metrics-review` scheduled task posts a daily reading on every `Monitoring` ticket. It is **report-only** and never moves tickets. Leaving `Monitoring` is a judgement call: metric improved + all ACs re-verified → `Done`; regressed → `In Progress` or revert. **Elapsed time is never a reason to close** — "it's been a week" is not a result. And at this traffic level there is no significance to find, so read slope and funnel health directionally, and name any confounder that shipped into the same surface in the same window rather than claiming an attributable result.
+
+**Linear's GitHub integration will fight you here.** It moves a ticket when its PR merges — if that's pointed at `Done`, tickets auto-close seconds after merge, before any metric exists. Point it at `Monitoring` (Settings → Integrations → GitHub). If you see a ticket close itself on merge, move it back; that flip is not a verification.
+
 ### Ticket Scoping — Vertical, Complete Features
 
 **Tickets should be vertical slices of user-facing functionality, not horizontal layers.**
@@ -127,7 +133,8 @@ mcp__linear-server__create_issue with:
 **CRITICAL**: Update Linear as you work:
 - Starting work → `state: "In Progress"`
 - PR created → `state: "In Review"`, add PR URL to description
-- PR merged → `state: "Done"`
+- PR merged → `state: "Monitoring"` (named a metric) or `state: "Done"` (nothing to measure)
+- Metric read and all ACs re-verified → `state: "Done"`
 - Blocked → Add "blocked" label, move to "Backlog" state
 - Unblocked → Remove "blocked" label
 

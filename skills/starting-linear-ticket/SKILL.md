@@ -104,6 +104,8 @@ digraph workflow {
     review [label="12. Update Linear\nto In Review", shape=box];
 
     merge [label="13. Merge & Cleanup\n(/merge)", shape=box, style=dashed];
+    monitor [label="13b. Monitoring\n(if metric named)", shape=box, style=dashed];
+    exit [label="14. Exit Monitoring\n(days later — read metric,\nverify ACs, then Done)", shape=box, style=dashed];
 
     fetch -> progress -> worktree -> rich;
     rich -> eng [label="yes"];
@@ -111,6 +113,9 @@ digraph workflow {
     brainstorm -> eng;
     eng -> fresh -> proto -> todos;
     todos -> tdd -> verify -> pr -> codereview -> ci -> localtest -> review -> merge;
+    merge -> monitor [label="user-facing"];
+    merge -> exit [label="internal only\n→ Done now"];
+    monitor -> exit [label="daily metrics-review\nposts readings"];
 }
 ```
 
@@ -426,7 +431,8 @@ Report completion with PR URL.
 | 10 | Check CI | `gh pr checks --watch` → fix failures if any |
 | 11 | Local deploy (if UI) | `npm run dev` in worktree → user manual tests → wait for feedback |
 | 12 | Update Linear | `mcp__linear-server__update_issue` → In Review |
-| 13 | Merge, Deploy & Cleanup | Project `land-and-deploy` skill (if exists) OR `gh pr merge --squash` → deploy verify → canary → Linear Done → worktree remove → pull main |
+| 13 | Merge, Deploy & Cleanup | Project `land-and-deploy` skill (if exists) OR `gh pr merge --squash` → deploy verify → canary → **Linear `Monitoring`** (or `Done` if nothing to measure) → worktree remove → pull main |
+| 14 | Exit Monitoring (days later) | Re-read every AC with evidence + read the metric directionally → `Done`, or back to `In Progress` on a regression. Never on elapsed time alone. |
 
 ## Common Mistakes
 
@@ -505,7 +511,11 @@ Report completion with PR URL.
 - "I'll do these 3 tickets one at a time" (if they're independent, use a team)
 - "I'll implement each task myself" (dispatch to subagents for parallelism)
 - "This cross-repo ticket is too complex for a team" (it's exactly when teams help most)
-- "The PR is merged, we're done" (still need: Linear → Done, worktree cleanup, pull main)
+- "The PR is merged, we're done" (still need: Linear state, worktree cleanup, pull main)
+- "It shipped, mark it Done" (if it named a metric, it goes to `Monitoring` — shipping is not the outcome)
+- "It's been a week in Monitoring, close it" (elapsed time is not a result — read the metric)
+- "The metric moved, ship it as Done" (re-read EVERY acceptance criterion first, not just the metric)
+- "Linear already flipped it to Done on merge, so it must be fine" (that's the GitHub integration, not a verification)
 
 **All of these mean: Follow the workflow. No shortcuts.**
 
@@ -553,15 +563,44 @@ Report completion with PR URL.
    git pull origin main
    ```
 
-9. **Update Linear to Done:**
+9. **Update Linear — `Monitoring`, NOT `Done`, if the ticket names a metric:**
+
+   Decide which state the ticket lands in:
+
+   | Ticket changes… | Land in | Why |
+   |---|---|---|
+   | User-facing behavior with a named metric in its ACs | **`Monitoring`** | The metric hasn't been read yet. Shipping ≠ working. |
+   | Internal only — refactor, types, tooling, docs, CI | **`Done`** | Nothing to measure. |
+
    ```
    mcp__linear-server__get_issue with id: "<ticket-id>"
    mcp__linear-server__update_issue with:
    - id: "<ticket-id>"
-   - state: "Done"
+   - state: "Monitoring"   # or "Done" for unmeasurable work
    ```
    Preserve existing labels (Bug/Feature/Improvement).
 
-10. **Report completion:** Confirm to user: PR merged, deploy verified, Linear updated, worktree cleaned.
+   **A ticket in `Monitoring` is not finished.** It leaves `Monitoring` only when a
+   human reads the metric and decides. The `metrics-review` scheduled task posts a
+   daily reading on every `Monitoring` ticket; it never moves tickets itself.
+
+10. **Report completion:** Confirm to user: PR merged, deploy verified, Linear state set, worktree cleaned. If the ticket went to `Monitoring`, say which metric is being watched and roughly when it should be readable.
 
 **Don't leave worktrees hanging** — they consume disk space and cause confusion in future sessions.
+
+---
+
+### Step 14: Exit Monitoring (days later, not in the shipping session)
+
+Triggered by the daily `metrics-review` comment showing enough accumulated data, or by the user asking where a shipped ticket stands.
+
+1. **Re-read the ticket's acceptance criteria.** Every one, not just the metric.
+2. **Confirm each AC with evidence.** A merged PR is not evidence. A passing test is not evidence that production behaves.
+3. **Read the metric directionally.** At low traffic there is no significance to find — judge slope and funnel health, not p-values. Name any confounder that shipped in the same window; if one exists, say the read is unattributable rather than claiming a result.
+4. **Then decide:**
+   - Metric moved the right way and all ACs met → **`Done`**
+   - Metric regressed → **`In Progress`** (or revert), with the numbers in a comment
+   - Not enough data yet → leave in `Monitoring`, note what you're still waiting for
+5. **Never flip to `Done` on elapsed time alone.** "It's been a week" is not a result.
+
+**Watch for the GitHub integration overriding you.** Linear's GitHub integration moves a ticket when its PR merges. Point it at `Monitoring` (Settings → Integrations → GitHub → merge state) so merging lands the ticket there. If it's still pointed at `Done`, it will silently close tickets seconds after merge, before any metric exists — if you see that happen, move the ticket back and fix the setting.
