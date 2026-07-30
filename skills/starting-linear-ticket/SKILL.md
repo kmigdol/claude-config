@@ -368,7 +368,7 @@ After creating the PR, run a code review before checking CI. This catches logic 
 **After review:**
 - **Critical issues** — must fix before proceeding. Push fixes, re-run review if needed.
 - **Important issues** — should fix. Push fixes.
-- **Suggestions** — nice to have. Fix if quick, otherwise note for follow-up.
+- **Suggestions** — nice to have. Fix if quick. If genuinely deferring, any follow-up ticket goes through the `creating-linear-tickets` skill (its Three Gates decide whether it's a real ticket or work that belongs in this one).
 
 Present the review findings to the user for their own review before proceeding. Do NOT skip ahead — the user should see the review results and approve before moving to CI.
 

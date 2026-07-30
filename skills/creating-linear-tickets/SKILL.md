@@ -1,6 +1,6 @@
 ---
 name: creating-linear-tickets
-description: Use when turning an idea or feature request into Linear tickets — orchestrates brainstorming, CEO review, engineering review, and ticket creation with acceptance criteria
+description: Use EVERY time a Linear ticket is about to be created, for any reason — planned features, quick bug tickets, follow-ups discovered mid-work, or tickets the user dictates. The ONLY sanctioned path for ticket creation (has a fast path for small tickets). Orchestrates brainstorming, CEO review, engineering review, and ticket creation with outcome framing and acceptance criteria.
 ---
 
 # Creating Linear Tickets
@@ -8,6 +8,8 @@ description: Use when turning an idea or feature request into Linear tickets —
 ## Overview
 
 Turn ideas into well-scoped Linear tickets through structured review. Orchestrates: brainstorm → CEO review → Eng review (architecture) → scope assessment → Linear creation.
+
+**This skill is the ONLY path for creating a Linear ticket.** Any time a ticket is about to be created — by you, by a subagent, mid-work, or verbatim from the user — it goes through this skill so the Three Gates below run. Never call `create_issue`/`save_issue` directly to create a ticket. Subagent prompts that might file tickets must instead report the proposed ticket back to the lead, who runs it through this skill.
 
 Every ticket created by this skill has validated scope, reviewed architecture, clear acceptance criteria, and a linked design document — so `starting-linear-ticket` can execute without re-discovering context.
 

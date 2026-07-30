@@ -118,6 +118,8 @@ The `metrics-review` scheduled task posts a daily reading on every `Monitoring` 
 
 ### Creating Tasks
 
+**🚨 EVERY ticket goes through the `creating-linear-tickets` skill — no exceptions. 🚨** Invoke it with the `Skill` tool before creating ANY Linear ticket: planned features, quick bugs, follow-ups discovered mid-work, tickets the user dictates verbatim. The skill enforces the three gates above and has a fast path for small, well-scoped tickets — so "it's just a quick ticket" is never a reason to bypass it. Do NOT call `create_issue`/`save_issue` directly to create a ticket; the template below is what the skill produces, kept here as a field reference only.
+
 ```
 mcp__linear-server__create_issue with:
 - title: "Task title"
