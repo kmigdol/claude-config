@@ -82,11 +82,16 @@ The Linear team name is configured per-project in the project's `.claude/CLAUDE.
 
 Create a Linear task for non-trivial work: features, bugs, refactors, multi-file changes, or anything taking >5 minutes.
 
+**Every ticket passes three gates before creation** (full detail in the `creating-linear-tickets` skill — they apply to ad-hoc ticket creation too):
+1. **Outcome first** — the ticket opens with an `## Outcome` section: what changes for a user/the business and the observable that proves it. Can't write one → it's a task inside an existing ticket, not a ticket.
+2. **Reopen, don't refile** — if the justification is "still broken after NEX-YYY", reopen NEX-YYY; don't file a new ticket that lets it stand as Done.
+3. **No AC discharge** — a split-off ticket may not carry the parent's goal-completing work (remediation, measurement, e2e coverage never split off). An AC is never satisfied by filing a ticket for it.
+
 **Do NOT create a new ticket for work that's needed to accomplish an existing ticket's goal.** If a piece of work helps accomplish the original goal of a ticket — and you can't accomplish that goal without it — it belongs IN that ticket, even when you discover the need mid-work or after the ticket was (prematurely) closed. Reopen the ticket rather than filing a follow-up. New tickets are only for **genuinely separate/additional outcomes**, not for finishing the one you're on. (Fragmenting goal-completing work across tickets lets the original read "Done" when its goal isn't met and buries the remaining work.)
 
 ### Marking a Ticket Done — Verify Every Acceptance Criterion First
 
-**Merging a PR, or the user saying "good to merge," is NOT the same as the ticket being Done.** Before flipping any ticket to Done, re-read its acceptance criteria and confirm **each one is actually met, with evidence** — not vibes. If any AC is unmet (e.g. a coverage/quality metric is only partially there and you're still working it), the ticket stays **In Progress**. "PR merged" ≠ "ACs verified" ≠ "Done". If you catch yourself still working toward the goal after marking Done, you closed too early — reopen it.
+**Merging a PR, or the user saying "good to merge," is NOT the same as the ticket being Done.** Before flipping any ticket to Done, re-read its acceptance criteria and confirm **each one is actually met, with evidence** — not vibes. Post the audit as a Linear comment (`AC audit: 1 ✅ …, 2 ❌ dropped per user <date>`). **An AC "handled" by filing a follow-up ticket is NOT met** — either the work happens in this ticket, or the AC is deliberately dropped with user sign-off, on the record. If any AC is unmet (e.g. a coverage/quality metric is only partially there and you're still working it), the ticket stays **In Progress**. "PR merged" ≠ "ACs verified" ≠ "Done". If you catch yourself still working toward the goal after marking Done, you closed too early — reopen it.
 
 **A shipped ticket that named a metric goes to `Monitoring`, not `Done`.** Shipping is not the outcome — the metric moving is. On merge, land it in `Monitoring` and leave it there until a human reads the number. `Done` requires shipped AND measured. Only work with nothing to measure (refactors, types, tooling, docs, CI) goes straight to `Done`.
 

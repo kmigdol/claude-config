@@ -516,6 +516,7 @@ Report completion with PR URL.
 - "It's been a week in Monitoring, close it" (elapsed time is not a result — read the metric)
 - "The metric moved, ship it as Done" (re-read EVERY acceptance criterion first, not just the metric)
 - "Linear already flipped it to Done on merge, so it must be fine" (that's the GitHub integration, not a verification)
+- "I'll file a follow-up for the rest and close this one" (goal-completing work — remediation, measurement, e2e — stays in THIS ticket; an AC is never satisfied by filing a ticket for it)
 
 **All of these mean: Follow the workflow. No shortcuts.**
 
@@ -563,7 +564,15 @@ Report completion with PR URL.
    git pull origin main
    ```
 
-9. **Update Linear — `Monitoring`, NOT `Done`, if the ticket names a metric:**
+9. **Close-time AC audit (mandatory before ANY state change):**
+
+   Enumerate every acceptance criterion in the ticket and mark each one: **met** (with evidence), **dropped** (deliberately cut, with user sign-off, recorded in a Linear comment), or **deferred**.
+
+   - **Any AC "deferred to a follow-up ticket" means the ticket is NOT closeable.** An AC is never satisfied by filing a ticket for it. Either the work happens in this ticket (stay `In Progress`), or the AC is explicitly dropped on the record.
+   - Remediation of existing bad data, the measurement/baseline for the change, and e2e coverage for shipped behavior are goal-completing ACs — they cannot be deferred out.
+   - Post the audit as a Linear comment: `AC audit: 1 ✅ (evidence), 2 ✅ (evidence), 3 ❌ dropped per user 2026-07-30`.
+
+10. **Update Linear — `Monitoring`, NOT `Done`, if the ticket names a metric:**
 
    Decide which state the ticket lands in:
 
@@ -584,7 +593,7 @@ Report completion with PR URL.
    human reads the metric and decides. The `metrics-review` scheduled task posts a
    daily reading on every `Monitoring` ticket; it never moves tickets itself.
 
-10. **Report completion:** Confirm to user: PR merged, deploy verified, Linear state set, worktree cleaned. If the ticket went to `Monitoring`, say which metric is being watched and roughly when it should be readable.
+11. **Report completion:** Confirm to user: PR merged, deploy verified, AC audit posted, Linear state set, worktree cleaned. If the ticket went to `Monitoring`, say which metric is being watched and roughly when it should be readable.
 
 **Don't leave worktrees hanging** — they consume disk space and cause confusion in future sessions.
 
@@ -595,7 +604,7 @@ Report completion with PR URL.
 Triggered by the daily `metrics-review` comment showing enough accumulated data, or by the user asking where a shipped ticket stands.
 
 1. **Re-read the ticket's acceptance criteria.** Every one, not just the metric.
-2. **Confirm each AC with evidence.** A merged PR is not evidence. A passing test is not evidence that production behaves.
+2. **Confirm each AC with evidence.** A merged PR is not evidence. A passing test is not evidence that production behaves. **An AC that was "handled" by filing a follow-up ticket is NOT met** — the ticket goes back to `In Progress` (or the AC is dropped on the record with user sign-off).
 3. **Read the metric directionally.** At low traffic there is no significance to find — judge slope and funnel health, not p-values. Name any confounder that shipped in the same window; if one exists, say the read is unattributable rather than claiming a result.
 4. **Then decide:**
    - Metric moved the right way and all ACs met → **`Done`**

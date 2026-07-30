@@ -44,6 +44,25 @@ An idea, feature request, bug report, or initiative. Can be:
 
 **When in doubt, ask:** "This seems well-scoped enough for a quick ticket. Want me to run the full workflow or just create the ticket?"
 
+## Three Gates — EVERY Ticket, Fast Path Included
+
+No ticket is created (by this skill or ad-hoc) without passing all three. These exist because a 2-week audit (Jul 2026, NEX-514→613) found 43% of tickets were pure mechanism with no stated outcome, and ~37% of the untouched backlog was fragments split off other tickets — skewed toward exactly the remediation/measurement/coverage work that makes the original goal true.
+
+### Gate 1 — Outcome first
+The ticket must open with an `## Outcome` section: what changes for a user or the business when this ships, and the observable (metric, dashboard number, production behavior) that proves it. The mechanism ("move the gate to the RPC") is never the outcome; the outcome is what the mechanism prevents or enables ("approved products stop 404ing on /products").
+
+**If you cannot write the Outcome section, this is not a ticket — it's a task inside an existing ticket.** Find that ticket and add it there instead.
+
+### Gate 2 — Reopen, don't refile
+Before creating, search Linear for a prior ticket on the same goal. If the justification for the new ticket contains "still" plus a prior NEX reference ("X is still broken after NEX-YYY", "same root cause still live"), the correct move is to REOPEN NEX-YYY (state → In Progress, comment explaining what the shipped fix missed) — not to file a new ticket. A new ticket here lets the old one read "Done" while its goal is unmet.
+
+### Gate 3 — No AC discharge
+If this ticket is being split out of another ticket ("follow-up to", "split out of", "found while", "remaining work from"), check: does the parent's goal hold without this work?
+- **No** → do not create this ticket. The work stays in the parent; if the parent is closed, reopen it. An acceptance criterion is never satisfied by filing a ticket for it.
+- **Yes** (genuinely separate, additional outcome) → the new ticket must pass Gate 1 on its own, and must state explicitly which parent it relates to and why the parent is complete without it.
+
+Remediation of existing bad data, the measurement/baseline for a shipped change, and e2e coverage for a shipped gate are **always** goal-completing work — they never split off.
+
 ## Workflow (Full)
 
 **IMPORTANT: Reviews happen early, before detailed ticket design.** The flow is: high-level design → reviews (challenge scope/architecture) → detailed ticket specs. Do NOT write detailed ticket descriptions, acceptance criteria, or scope before the reviews have run. The reviews exist to shape what the tickets should be.
@@ -196,6 +215,12 @@ mcp__linear-server__save_issue with:
 ## Ticket Description Template
 
 ```markdown
+## Outcome
+<What changes for a user or the business when this ships, and the observable that proves it.
+e.g. "Concern pages for approved products stop 404ing — /topics/<slug> 404 rate in Vercel logs
+drops to 0 for approved slugs." NOT the implementation. If this section can't be written,
+the work belongs inside an existing ticket (see Three Gates).>
+
 ## Problem
 <Problem statement — why are we building this?>
 
@@ -248,6 +273,7 @@ Project-specific traps relevant to this change:
 
 **Why these sections matter for autonomous execution:**
 
+- **Outcome** = why the ticket exists. It's what Step 14 (exit Monitoring) reads against, and it's the difference between a plan and a changelog entry.
 - **Acceptance Criteria** = the contract.
 - **Verification → Observable Signals** = the operational layer that makes the contract executable. Prevents "tests pass but behavior is wrong" bugs (slug-vs-UUID class).
 - **Verification → Test Scenarios** = TDD inputs the implementer literally writes as failing tests first.
@@ -275,10 +301,24 @@ Project-specific traps relevant to this change:
 - **Problem:** "Building later" items lose context, become meaningless backlog entries
 - **Fix:** Include WHY it was deferred and WHAT would trigger building it
 
+### Mechanism-framed tickets
+- **Problem:** Title/description describe the implementation change ("consolidate the 4 merge seams", "add updated_at trigger") with no stated user/business outcome — nobody can later tell whether the ticket achieved anything
+- **Fix:** Gate 1. Write the Outcome section first; derive the mechanism from it, not the reverse
+
+### Discharging an AC by filing a ticket for it
+- **Problem:** Original closes "Done" with its goal unmet; the goal-completing work (remediation, measurement, e2e coverage) rots in Backlog as a fragment
+- **Fix:** Gate 3. The work stays in the parent ticket — reopen the parent if it's closed
+
+### Refiling instead of reopening
+- **Problem:** "X still broken after NEX-YYY" filed as a new ticket lets NEX-YYY stand as Done when it failed
+- **Fix:** Gate 2. Reopen NEX-YYY with a comment on what the fix missed
+
 ## Red Flags
 - "This is just one quick ticket, we don't need all this"
 - "The acceptance criteria are obvious"
 - "Let me just create the tickets and start coding"
 - "We can figure out the architecture during implementation"
+- "I'll file a follow-up for the remediation/measurement/e2e part" (Gate 3 — it stays in the parent)
+- "The outcome is implied" (write it down; if you can't, it's not a ticket)
 
 **All of these mean: Run the workflow. Cheap questions now save expensive rework later.**

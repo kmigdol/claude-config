@@ -191,8 +191,9 @@ When an agent completes and reports its PR:
 4. **Wait for user to approve**
 5. Merge: `gh pr merge <number> --squash --delete-branch`
 6. Clean up worktree
-7. Update Linear issue to "Done"
-8. **Shut down the agent** — send shutdown_request only after merge
+7. **Run the close-time AC audit** (see `starting-linear-ticket` Step 13.9): every AC met with evidence, or dropped on the record. An AC deferred to a follow-up ticket = NOT met = the issue stays "In Progress".
+8. Update Linear issue: **"Monitoring"** if the ticket names a metric (per the global Done-vs-Monitoring rule), **"Done"** only for unmeasurable internal work with all ACs met. NEVER straight to "Done" for user-facing changes — this step previously said "Done" unconditionally and caused 52 tickets to bypass Monitoring in two weeks.
+9. **Shut down the agent** — send shutdown_request only after merge
 
 **Do this per-PR as they finish** — don't wait for all agents to complete.
 
