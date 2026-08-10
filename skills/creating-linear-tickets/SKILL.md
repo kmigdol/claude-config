@@ -244,6 +244,8 @@ What's absent from all three: symptom, rationale, metric, file path, "— becaus
 
 The problem statement is not lost — it goes in `## Problem` at full detail with production evidence. Symptom-first phrasing belongs to the incident, not the fix.
 
+**Enforced by hook.** `~/.claude/hooks/linear-title-check.py` (PreToolUse on `mcp__.*__save_issue`) blocks a title with an explanatory ` — ` clause, over 100 chars, or a leading article/gerund — including on ad-hoc ticket creation that skips this skill. If it blocks you, rewrite and retry; do not work around it. It only checks shape, so check 2 above is still yours to apply.
+
 ## Ticket Description Template
 
 ```markdown

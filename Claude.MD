@@ -116,6 +116,8 @@ Each is a single statement of what gets built. Note what's absent: no symptom, n
 
 Ticket titles are the one place all three gates are visible at a glance, so read a new title against them: a title naming only a symptom or a mechanism is a Gate 1 miss; a title that reads "…still broken after NEX-YYY" is a Gate 2 miss (reopen it); a title naming only remediation/measurement/e2e split off a parent is a Gate 3 miss.
 
+**This is enforced by a hook, not by memory.** `~/.claude/hooks/linear-title-check.py` runs `PreToolUse` on `mcp__.*__save_issue` (both Linear MCP servers) and **blocks the call** on the mechanically-decidable failures: an explanatory ` — ` clause, over 100 characters, or a leading article/gerund. The block message is fed back so the title gets rewritten and retried; a `save_issue` that doesn't set a title passes straight through. It catches the shape, not the judgment — deciding whether the verb names something a user or the business would notice is still yours. To inspect or disable it, see `/hooks`.
+
 **Do NOT create a new ticket for work that's needed to accomplish an existing ticket's goal.** If a piece of work helps accomplish the original goal of a ticket — and you can't accomplish that goal without it — it belongs IN that ticket, even when you discover the need mid-work or after the ticket was (prematurely) closed. Reopen the ticket rather than filing a follow-up. New tickets are only for **genuinely separate/additional outcomes**, not for finishing the one you're on. (Fragmenting goal-completing work across tickets lets the original read "Done" when its goal isn't met and buries the remaining work.)
 
 ### Marking a Ticket Done — Verify Every Acceptance Criterion First
