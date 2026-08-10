@@ -187,7 +187,8 @@ Inline only the rules that are actually relevant. Do not dump everything — noi
 
 ```
 mcp__linear-server__save_issue with:
-- title: Descriptive, action-oriented
+- title: One imperative sentence naming the change, concrete nouns, no em-dash
+         explanation clause. See "Ticket Titles" below. NOT the symptom.
 - description: See ticket template below
 - teamId: <team-id>  # Look up with list_teams
 - stateId: <backlog-state-id>  # Look up with list_issue_statuses
@@ -213,6 +214,35 @@ mcp__linear-server__save_issue with:
 - Report back: list of created tickets with IDs and titles
 
 **No separate design document.** Project-level design context goes in the project description. Ticket-level requirements go in the ticket description. This avoids information being split across multiple places.
+
+## Ticket Titles
+
+**Format:** one imperative sentence naming the change, in concrete nouns. Optional `Area:` prefix. **No trailing em-dash clause explaining or justifying it.**
+
+A title says what the ticket does. A symptom-framed title describes the world we're leaving, stays "true" after the fix lands, and turns the backlog into a list of complaints instead of intended changes.
+
+Write the `## Outcome` section first, then compress it to one line. The title comes from Outcome, never from Problem.
+
+**Calibration — copy these shapes:**
+
+- "Cut daily pipeline cron over from Railway to Prefect schedule" (NEX-390)
+- "Product variants: link distinct sibling SKUs into a family + \"Other variants\" on product pages" (NEX-487)
+- "Fold refresh-retailers into the daily Prefect pipeline as a (non-fatal) stage" (NEX-392)
+
+What's absent from all three: symptom, rationale, metric, file path, "— because Y". NEX-487 runs long only because it names two deliverables — that's fine. Length is a problem when it comes from *explaining*.
+
+| Instead of (symptom-framed) | Write (one imperative statement) |
+|---|---|
+| "A killed pipeline run silently suppresses the next 20 hours of runs" | "Stop a killed run from skipping the next day's pipeline" |
+| "Catalog cache invalidation is all-or-nothing" | "Rebuild only the pages a publish changed" |
+| "/admin/taxonomy crashes during rapid approval bursts" | "Keep /admin/taxonomy up during approval bursts" |
+
+**Two checks before you save the title:**
+
+1. **Is there an em-dash clause restating the symptom?** Delete it. `<change> — <the problem it fixes>` doubles the length to repeat what `## Problem` already says. If the verb feels too thin to stand alone, fix the verb rather than propping it up.
+2. **Would a user or the business notice this verb's effect?** If not, the verb is an implementation step ("emit a marker", "add a column", "coalesce the handlers") and this is Gate 1 failing — the work is probably a task inside an existing ticket, not a ticket.
+
+The problem statement is not lost — it goes in `## Problem` at full detail with production evidence. Symptom-first phrasing belongs to the incident, not the fix.
 
 ## Ticket Description Template
 
@@ -307,6 +337,14 @@ Project-specific traps relevant to this change:
 - **Problem:** Title/description describe the implementation change ("consolidate the 4 merge seams", "add updated_at trigger") with no stated user/business outcome — nobody can later tell whether the ticket achieved anything
 - **Fix:** Gate 1. Write the Outcome section first; derive the mechanism from it, not the reverse
 
+### Symptom-framed titles
+- **Problem:** The title names the symptom ("A killed pipeline run silently suppresses the next 20 hours of runs", "/admin/taxonomy crashes during approval bursts"). It describes the world we're leaving, so it reads as accurate forever — including after the fix ships — and a backlog of them is a list of complaints rather than intended changes
+- **Fix:** One imperative sentence naming the change. See Ticket Titles. The symptom moves to `## Problem`, where it belongs, at full detail
+
+### Titles with an explanatory em-dash clause
+- **Problem:** `<change> — <the symptom it fixes>` doubles the title's length to restate what `## Problem` already covers, and pushes titles past 90 characters where they stop being scannable in a backlog list
+- **Fix:** Cut the clause. If the verb can't stand alone, the verb is the problem
+
 ### Discharging an AC by filing a ticket for it
 - **Problem:** Original closes "Done" with its goal unmet; the goal-completing work (remediation, measurement, e2e coverage) rots in Backlog as a fragment
 - **Fix:** Gate 3. The work stays in the parent ticket — reopen the parent if it's closed
@@ -322,5 +360,6 @@ Project-specific traps relevant to this change:
 - "We can figure out the architecture during implementation"
 - "I'll file a follow-up for the remediation/measurement/e2e part" (Gate 3 — it stays in the parent)
 - "The outcome is implied" (write it down; if you can't, it's not a ticket)
+- "The title says what's broken, that's clear enough" (a title says what will be true after, not what's true now)
 
 **All of these mean: Run the workflow. Cheap questions now save expensive rework later.**

@@ -83,9 +83,38 @@ The Linear team name is configured per-project in the project's `.claude/CLAUDE.
 Create a Linear task for non-trivial work: features, bugs, refactors, multi-file changes, or anything taking >5 minutes.
 
 **Every ticket passes three gates before creation** (full detail in the `creating-linear-tickets` skill — they apply to ad-hoc ticket creation too):
-1. **Outcome first** — the ticket opens with an `## Outcome` section: what changes for a user/the business and the observable that proves it. Can't write one → it's a task inside an existing ticket, not a ticket.
+1. **Outcome first** — the ticket opens with an `## Outcome` section: what changes for a user/the business and the observable that proves it. Can't write one → it's a task inside an existing ticket, not a ticket. **The title carries the same burden** — see Ticket Titles below.
 2. **Reopen, don't refile** — if the justification is "still broken after NEX-YYY", reopen NEX-YYY; don't file a new ticket that lets it stand as Done.
 3. **No AC discharge** — a split-off ticket may not carry the parent's goal-completing work (remediation, measurement, e2e coverage never split off). An AC is never satisfied by filing a ticket for it.
+
+### Ticket Titles — One Imperative Statement of the Change
+
+**A title says what the ticket does, not what is broken today.** A symptom-framed title ("X silently breaks Y", "Z crashes under load", "W is all-or-nothing") describes the world we're leaving, so it reads as accurate forever — including after the fix ships — and a backlog of them is a list of complaints rather than intended changes.
+
+**Format:** one imperative sentence naming the change, in concrete nouns. Optional `Area:` prefix. **No trailing em-dash clause explaining or justifying it.**
+
+These are the calibration — copy their shape:
+
+- "Cut daily pipeline cron over from Railway to Prefect schedule" (NEX-390)
+- "Product variants: link distinct sibling SKUs into a family + \"Other variants\" on product pages" (NEX-487)
+- "Fold refresh-retailers into the daily Prefect pipeline as a (non-fatal) stage" (NEX-392)
+
+Each is a single statement of what gets built. Note what's absent: no symptom, no rationale, no metric, no file path, no "— because Y". NEX-487 runs long because it's naming two deliverables, which is fine; length is only a problem when it comes from *explaining*.
+
+| Instead of (symptom-framed) | Write (one imperative statement) |
+|---|---|
+| "A killed pipeline run silently suppresses the next 20 hours of runs — the debounce marker records started, never finished" | "Stop a killed run from skipping the next day's pipeline" |
+| "Catalog cache invalidation is all-or-nothing — every publish regenerates all 1,811 pages regardless of what changed" | "Rebuild only the pages a publish changed" |
+| "/admin/taxonomy crashes during rapid approval bursts" | "Keep /admin/taxonomy up during approval bursts" |
+| "Renaming a product in the catalog leaves its old name live" | "Stop serving a product's old name after a rename" |
+
+**The em-dash clause is the wordiness generator.** `<change> — <the symptom it fixes>` is the shape to avoid; it doubles the length to restate what `## Problem` already says. If the verb feels too thin to stand alone, fix the verb — don't prop it up with a second clause.
+
+**The verb names the change a user or the business would notice, not an implementation step.** "Emit a completion marker", "Add an `updated_at` column", "Coalesce the refresh calls" all fail that test — they're steps inside the work, not its point. When the honest verb is a pure-mechanism one, the title is telling you this is a task inside another ticket, not a ticket (Gate 1).
+
+**The problem still gets written down** — in `## Problem`, at full detail, with the production evidence. Not in the title, and neither are file paths, line numbers, or metrics. Symptom-first phrasing belongs to the *incident*; the ticket is for the *fix*.
+
+Ticket titles are the one place all three gates are visible at a glance, so read a new title against them: a title naming only a symptom or a mechanism is a Gate 1 miss; a title that reads "…still broken after NEX-YYY" is a Gate 2 miss (reopen it); a title naming only remediation/measurement/e2e split off a parent is a Gate 3 miss.
 
 **Do NOT create a new ticket for work that's needed to accomplish an existing ticket's goal.** If a piece of work helps accomplish the original goal of a ticket — and you can't accomplish that goal without it — it belongs IN that ticket, even when you discover the need mid-work or after the ticket was (prematurely) closed. Reopen the ticket rather than filing a follow-up. New tickets are only for **genuinely separate/additional outcomes**, not for finishing the one you're on. (Fragmenting goal-completing work across tickets lets the original read "Done" when its goal isn't met and buries the remaining work.)
 
