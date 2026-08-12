@@ -23,10 +23,15 @@ Why: the review's value is the *complete* picture — which tickets are stuck, w
 
    If the ticket names **no** metric, comment once saying it's in Monitoring without a named metric and should either get one or move to Done, then move on. Do not invent a metric for it.
 
+   **If the ticket carries an explicit exit checklist** — a "Post-Merge Verification", "Monitoring Exit Checklist", or similar section listing concrete queries/commands — **run every item in it and report each result separately.** That checklist is the ticket author's own definition of done; it outranks your judgement about which single observable matters. A checklist item you skipped is reported as unread, and the ticket cannot be recommended for close while any item is unread.
+
 3. **Read the metric from wherever it actually lives.** Most Monitoring tickets here are pipeline/infra work, and their observables are **not** PostHog events. Pick the source from the ticket:
    - **PostHog** — traffic, funnel and CTR metrics. Use the PostHog MCP tools (`mcp__a1b28c81-1281-4eee-a940-e5db946cc335__*`; find them with ToolSearch, query "posthog query insight").
    - **Supabase MCP (`execute_sql`)** — counts, audit queries, queue depths, `pipeline_stage_runs`. This is the most common case.
    - **Production HTTP** — `curl` for 200/404, rendered copy, `search-index.json` membership.
+   - **Railway logs** — `railway logs --service <name> --environment production`. Use this whenever a ticket's observable is "the stage/leg completes without crashing" rather than a number. You CAN read these; report-only means you never move a ticket, not that you skip a command.
+     - ⚠️ **Railway retains logs for the LATEST DEPLOY ONLY.** A cron tick and a merge-triggered rebuild each create a new deployment, so an earlier run's logs are gone. Since every push to `main` now rebuilds these services, a same-day merge can wipe the morning cron's logs before you read them. If the latest deployment is not the run you wanted, say the evidence was **lost to a later deploy** — do not report that as clean.
+     - Cross-check what you're reading with `railway status --json` → `serviceInstances[].latestDeployment.meta.commitHash` / `.createdAt`.
    - **Not reachable from here:** Vercel usage/billing (ISR writes), Google Search Console / CrUX, the self-hosted Prefect server's `flow_run` table. **Say so plainly and name who has to read it** — never substitute a proxy metric and never imply a pass.
 
    **A metric you could not read is reported as "unread", not "flat".** Those are different findings and conflating them fakes a result.
