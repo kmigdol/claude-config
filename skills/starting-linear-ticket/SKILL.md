@@ -87,6 +87,9 @@ digraph workflow {
     rankdir=TB;
 
     fetch [label="1. Fetch ticket", shape=box];
+    conflict [label="1.5. In-Flight Conflict Check\n(vs In Progress / In Review tickets)", shape=box];
+    clash [label="Conflict found?", shape=diamond];
+    escalate [label="STOP — report the collision,\nrecommend defer/rescope/sequence,\nwait for user", shape=box, style=filled, fillcolor=lightgrey];
     progress [label="2. Mark In Progress", shape=box];
     worktree [label="3. Create worktree", shape=box];
     rich [label="Ticket has Verification\n+ Snapshot sections?", shape=diamond];
@@ -107,7 +110,11 @@ digraph workflow {
     monitor [label="13b. Monitoring\n(if metric named)", shape=box, style=dashed];
     exit [label="14. Exit Monitoring\n(days later — read metric,\nverify ACs, then Done)", shape=box, style=dashed];
 
-    fetch -> progress -> worktree -> rich;
+    fetch -> conflict -> clash;
+    clash -> escalate [label="yes"];
+    clash -> progress [label="no"];
+    escalate -> progress [label="user says proceed"];
+    progress -> worktree -> rich;
     rich -> eng [label="yes"];
     rich -> brainstorm [label="no"];
     brainstorm -> eng;
@@ -135,6 +142,53 @@ Extract and summarize:
 If ticket not found or MCP timeout: ask user to verify ticket ID or run `/mcp`.
 
 **Check for acceptance criteria.** If the ticket does NOT have clear acceptance criteria (specific, testable conditions that define "done"), STOP and ask the user to provide them before proceeding. Do not invent acceptance criteria or proceed without them — they drive the design, tests, and verification steps downstream.
+
+### Step 1.5: In-Flight Conflict Check (mandatory, before marking In Progress)
+
+**Never start a ticket without first checking what it collides with.** Every other ticket already in
+flight is invisible from inside this ticket's description — the ticket text was written before those
+branches existed and cannot warn you. Run the probes in `conflict-check.md`, which cover the four
+collision classes:
+
+1. **File overlap** — the files this ticket must touch are already modified on an in-flight branch.
+2. **Shared production resource** — both tickets write the same prod table, ledger, cron, schema
+   object, or external config. Git shows nothing; the collision is at apply time.
+3. **Mechanism change under an in-flight dependent** — this ticket changes or gates a pipeline that
+   an in-flight ticket is queued to ride through (migration auto-apply, deploy path, publish gate).
+   The dependent silently stops working.
+4. **Wide mechanical churn** — mass renames/moves/codemods that force a painful rebase on every
+   open branch, even with zero textual overlap.
+
+Classes 2 and 3 are the ones that actually bite, and neither is visible in a `git diff`. Do not
+reduce this step to a filename comparison.
+
+Enumerate in-flight work from **both** Linear and the local checkout — each sees things the other
+misses (a Linear ticket with no branch yet; a worktree whose ticket was never moved out of Todo):
+
+```
+mcp__linear-server__list_issues with:
+- team: "<team-name>"
+- state: "In Progress"     # repeat for "In Review"
+- fields: ["id", "title", "status", "gitBranchName", "updatedAt"]
+```
+
+```bash
+git worktree list
+gh pr list --state open --json number,title,headRefName,files
+```
+
+**Verdict — report all three fields explicitly, never a bare "no conflict":**
+
+| Verdict | Meaning | Action |
+|---|---|---|
+| **Clear** | No overlap in any of the four classes | Proceed to Step 2 |
+| **Sequencing** | Safe only in a specific order, or safe for part of the scope | **STOP.** Name which phase is blocked, by what, and what unblocks it. Recommend a scoping. Wait for the user. |
+| **Blocked** | Cannot proceed without breaking in-flight work | **STOP.** Report and recommend deferring. Wait for the user. |
+
+On **Sequencing**, the usual right answer is to start the safe phases now and hold the colliding one
+— say precisely where the line falls rather than blocking the whole ticket. Deciding to proceed
+through a known collision is the user's call, not yours. If they say proceed, record the accepted
+collision in the ticket so the other ticket's owner can see it.
 
 ### Step 2: Mark as In Progress
 
@@ -418,6 +472,7 @@ Report completion with PR URL.
 | Step | Action | Skill/Tool |
 |------|--------|------------|
 | 1 | Fetch ticket | `mcp__linear-server__get_issue` |
+| 1.5 | In-flight conflict check | Probes from `conflict-check.md` → Clear / Sequencing / Blocked. Sequencing or Blocked = STOP and escalate. |
 | 2 | Mark in progress | `mcp__linear-server__update_issue` |
 | 3 | Create worktree | `superpowers:using-git-worktrees` |
 | 4 | Design Pass (conditional) | If ticket has Verification + Snapshot → `plan-review-eng` only. Else `superpowers:brainstorming` then `plan-review-eng`. |
@@ -443,6 +498,14 @@ Report completion with PR URL.
 ### Trusting a stale Implementation Snapshot
 - **Problem:** Snapshot listed file paths or symbols that have since moved or been renamed; agent edits the wrong file or reinvents a helper that's been refactored
 - **Fix:** Always run the Step 4.5 freshness check on rich tickets. If any probe fails, spawn the Rescue Scout — don't paper over a broken anchor.
+
+### Starting a ticket without checking what's already in flight
+- **Problem:** The ticket description was written before the other branches existed and cannot warn you about them. The collisions that hurt — two migrations redefining one function, a bulk repair whose snapshot misses a mid-flight merge, a gate change that silently orphans a queued migration — are all invisible in `git diff`.
+- **Fix:** Run Step 1.5 before marking In Progress. Check all four classes, not just filenames.
+
+### Reporting "no conflict" after comparing only filenames
+- **Problem:** File overlap is the class that *does* show up in review anyway. Shared prod resources and mechanism changes are the ones that ship broken.
+- **Fix:** Name which of the four classes you checked. A verdict that doesn't say what was examined isn't a verdict.
 
 ### Forgetting to mark ticket In Progress
 - **Problem:** Team doesn't know work has started
@@ -498,6 +561,9 @@ Report completion with PR URL.
 
 ## Red Flags
 
+- "Nothing else is in flight, I'd have noticed" (run Step 1.5 — the Linear list and `git worktree list` each catch what the other misses)
+- "Different files, so no conflict" (that's one of four classes; shared prod resources and mechanism changes don't show in a diff)
+- "The collision is minor, I'll just be careful" (a Sequencing verdict is the user's call to override, not yours)
 - "This is simple, I don't need to brainstorm"
 - "Let me just make a quick fix in main"
 - "I'll write tests after"
