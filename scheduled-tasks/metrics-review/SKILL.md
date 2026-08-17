@@ -44,6 +44,27 @@ Why: on 2026-08-17 a single NEX-661 finding (a title over-claiming its dupe coun
 
 A spun-out investigation is not a deferral. It is the same work, in a session that can actually hold it.
 
+## 🚨 What Monitoring is for — effects in production, not correctness
+
+**Monitoring asks one question: did the intended effect actually happen in production?** It does not ask whether the code is correct. Correctness is the PR's job, and it was settled before merge.
+
+The distinction, because it is easy to blur:
+
+| Not this (correctness) | This (effect) |
+| -- | -- |
+| Does the section render on the right pages? | Did anyone engage with it, and did the funnel move? |
+| Do the analytics events fire? | What do the events *say* — did the rate change vs pre-ship? |
+| Is the data shaped the way the AC specified? | Did reshaping the data change what users do? |
+| Are there N rows violating the constraint? | Did the constraint's *purpose* get served? |
+
+**A ticket's stated observable is often a data property** ("median word count drops 29 → 13", "zero cards over 16 words"). Read it — it is the ticket's own bar — but do not stop there and do not turn the review into a hunt for stragglers. **The 14 rows still over target are not the finding. Whether shorter cards changed behaviour is the finding.** Almost every ticket here names a secondary behavioural metric for exactly this reason; if you only report the data property, you have reported the easy half.
+
+**Verifying a mechanism is in scope only as a precondition for reading its effect.** Confirming links still render before reporting zero clicks is correct — it separates "nobody clicked" from "nothing was there to click" (see the zero-count rule below). Confirming links render *as the deliverable* is not.
+
+**When a ticket names no behavioural metric,** say so and recommend it get one or move to Done — do not substitute a correctness audit to fill the gap. A ticket whose only observable is "the code does what it says" did not need Monitoring; that is the signal to close it, not to inspect it harder.
+
+**A stray correctness defect found while reading a metric** gets one line in the comment and, if it matters, a spawned task. It does not become the comment, and it does not hold the ticket in Monitoring — elapsed time will never fix it, so it is not a monitoring question.
+
 ## What to do
 
 1. **Find the tickets.** `mcp__linear-server__list_issues` with `team: "Nextbest"`, `state: "Monitoring"`. If none, post nothing anywhere and reply with one line: "No tickets in Monitoring." Then stop.
