@@ -94,9 +94,14 @@ The distinction, because it is easy to blur:
        -H 'Content-Type: application/json' -d '{"limit":200}'
      ```
      `7b9f58d8-…` is the `daily-pipeline` deployment. To classify a crash: compare each worker's `created` / `last_heartbeat_time` against the run's `start_time` / `end_time`, then correlate to a `pipeline/**` commit via `git log`. Note this leaves the Railway CLI linked to `production` — say so in the digest.
-   - **Genuinely not reachable:** Vercel usage/billing (ISR writes, transformation counts) and Google's Rich Results Test. **Say so plainly and name who has to read it** — never substitute a proxy metric and never imply a pass.
+   - **Vercel usage/billing — REACHABLE via `claude-in-chrome`.** ~~Previously listed here as not reachable; that was wrong and it cost real work.~~ Go to `https://vercel.com/kayleighs-projects-edc9a973/~/usage`, scroll to **Consumption Breakdown**, and read the per-product rows (ISR Writes, ISR Reads, Image Optimization Transformation, Build CPU Minutes, Observability Events). **Each row is clickable** and drills into a per-day chart — use that to answer "did it spike after the deploy", which the cycle total cannot. Read counts and hours, not dollars.
+     - ⚠️ The usage page is script-heavy and `screenshot`/`get_page_text` frequently time out on a tab that has already navigated a few times. **Open a fresh tab** (`tabs_create_mcp`) and load it there — that works reliably. `javascript_tool` is blocked on this origin.
+   - **Google's Rich Results Test — REACHABLE via `claude-in-chrome`.** Navigate to `https://search.google.com/test/rich-results?url=<urlencoded>`; it auto-runs and redirects to a `/result?id=…` page in ~10s. Read the "N valid items detected" banner, then click into each type (Breadcrumbs, Carousels, …) for per-item errors and warnings.
+   - **Genuinely not reachable:** nothing currently known. If you hit something, say so plainly, name who has to read it, and **add it here** — never substitute a proxy metric and never imply a pass.
 
-   **Before writing "not reachable / needs a human" about anything, check this list.** Five consecutive reviews deferred the Prefect read as human-only; it took two minutes and it overturned an AC that had been reported as passing. Declaring a metric unreadable is not a neutral non-answer — it defers the work indefinitely.
+   **Before writing "not reachable / needs a human" about anything, check this list — and then try anyway.** This file's own "not reachable" list has now been wrong twice. Five consecutive reviews deferred the Prefect read as human-only; it took two minutes and overturned an AC reported as passing. On 2026-08-17 the review deferred NEX-667's AC 3 and AC 6 as human-only **because this file said they were** — Kayleigh pushed back, and both were closed inside five minutes (Vercel: 649 transformations / $0.04, no post-deploy spike; RRT: 2 valid items, zero errors). Declaring a metric unreadable is not a neutral non-answer — it defers the work indefinitely, and a stale entry on this list launders that deferral as a fact.
+
+   **The rule: attempt the read, then report what happened.** "I tried X and hit Y" is a finding. "It needs a human" without an attempt is not.
 
    **A metric you could not read is reported as "unread", not "flat".** Those are different findings and conflating them fakes a result.
 
