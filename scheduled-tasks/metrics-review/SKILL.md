@@ -126,6 +126,16 @@ A spun-out investigation is not a deferral. It is the same work, in a session th
 - **Traffic is too low for statistical significance.** Do not compute or cite p-values or claim a result is "significant". Read slope and funnel health directionally. Say "directional signal", never "proven".
 - **Under ~200 denominator events in the post window, say so explicitly and recommend continuing to monitor.** A 3-day read on 40 sessions is noise.
 - **A single day is never a baseline.** If the pre-window overlaps a backfill, deploy, or another ship, flag it.
+- 🚨 **The post window must MATCH THE COMPOSITION of the pre window, not just its length.** Equal-length windows are not comparable if they are made of different kinds of days. Before quoting any delta, map both windows to **day-of-week** and compare like against like — weekday vs weekday, weekend vs weekend. State the split and the `n` for each.
+
+  This bites hardest on anything driven by **Kayleigh's own working rhythm** — build counts, deploy-triggered egress, merge volume, admin-dashboard activity, approval-queue depth. It also bites on user-traffic metrics, which have their own weekday/weekend shape.
+
+  Evidence (2026-08-17, NEX-681): a fix merged Friday evening, and the three post-fix days were **Sat, Sun, and a partial Mon**. Measured against an all-days pre-fix average that read as a **−93%** cut in Supabase egress. Split by day-of-week, pre-fix weekends already ran at **~25%** of weekday volume (27.6px vs 110.7px), so the only like-for-like comparison available was **weekend vs weekend: −82%**, with exactly **one** partial weekday post-fix. The change is probably real and large — but −93% was an artifact of window composition, and it was one query away from being caught.
+
+  Practical consequences:
+  - A fix that lands Thu/Fri cannot be read before the following week. Say so and name the date that gives a full working week, rather than reporting the weekend as a result.
+  - If the post window has `n=1` for the cohort that carries the volume, that is **not enough data** — report it as such, not as a direction.
+  - Quote the like-for-like number as the headline. If you also quote the all-days figure, label it as composition-confounded.
 - **Absence of movement is a finding**, not a failure to report. Say "flat" plainly.
 - Never describe a metric as improved when the numbers don't show it. If the read is bad news, lead with the bad news.
 - **A metric gated on human action is not a metric that elapsed time will move.** If the observable depends on someone working a queue or reading a dashboard, and that hasn't happened, say so and recommend a decision rather than "keep monitoring" — otherwise the ticket reads "flat" forever.
