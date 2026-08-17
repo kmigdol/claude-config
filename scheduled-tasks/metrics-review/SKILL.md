@@ -52,6 +52,24 @@ Why: the review's value is the *complete* picture — which tickets are stuck, w
 
    Rules that matter for PostHog reads:
    - **Always set `filterTestAccounts: true`** — internal traffic is roughly 25% of events and skews everything.
+   - 🚨 **`execute-sql` does NOT apply `filterTestAccounts`.** That flag is honoured by the `query-*` tools only. Any raw SQL over `events` is unfiltered by default and will silently include internal traffic. Filter inline: `properties.$host = 'www.nextbest.one'`, and check `person.properties.email` before believing a small count.
+   - 🚨 **Break every event count down by `$host` BEFORE reporting it. Never report a bare total.** Vercel preview hosts (`nextbest-*.vercel.app`, `nextbest-git-*.vercel.app`) carry the developer's own post-deploy verification clicks, and for a newly-shipped feature they are frequently *most* of the events. Report production and preview as separate columns, and read the metric off production only.
+
+     The query shape:
+
+     ```sql
+     SELECT toDate(timestamp) AS day, properties.$host AS host, properties.<surface_prop> AS surface, count() AS n
+     FROM events
+     WHERE event = '<event>' AND timestamp >= now() - INTERVAL 21 DAY
+     GROUP BY day, host, surface ORDER BY day DESC
+     ```
+
+     This is not hypothetical and it cuts both ways — on 2026-08-17 it changed the finding on four tickets in one review:
+     - **NEX-650 / 663 / 672**: `summary_entity_link_clicked` showed 20 events, which read as a working feature. Split by host: 13 were Vercel previews, and the 7 "production" ones were 2 people in 3 sessions inside 27 minutes, one of them Kayleigh's own logged-in account. **Real organic clicks: zero.** Reported bare, that number would have read as a ~2.7% link CTR.
+     - **NEX-487**: the reverse error. A bare "4 impressions, 1 click" read as broken instrumentation. Split by host and divided by *eligible* pageviews, it was 1 impression per 8 eligible views — right on the ~15% below-fold benchmark. The analytics were fine; the exposure was 4.2%.
+
+   - **When an event count is near zero, find its real denominator before calling it a failure.** Not all pageviews — the ones that could possibly have fired it. A section that only renders on 64 of 799 products has a denominator of "views of those 64", not "all product views". Getting this wrong turns a coverage problem into a false instrumentation bug, or hides one.
+   - **A zero-count event needs one discriminating check before you report it as an absence of clicks.** Confirm the feature still renders in production (`curl | grep -c 'data-testid=…'`) and that sibling events are flowing in the same window. Rendering + healthy sibling events = genuine absence; missing markup or a site-wide event gap = a regression, which is a completely different finding.
    - Compare a **post-ship window against an equal-length pre-ship window**, using the ticket's own ship date (its `completedAt`, or the merge date in a comment/PR link) as the split.
    - Segment the same way the ticket did. If it said Google-organic-only, filter to that — don't silently widen to all traffic.
    - Report the raw numerator and denominator, not just a percentage. `59/884` is auditable; "6.7%" alone is not.
@@ -59,6 +77,7 @@ Why: the review's value is the *complete* picture — which tickets are stuck, w
 4. **Post one comment per ticket** with `mcp__linear-server__save_comment`. Keep it compact:
    - Days elapsed since ship, and the two windows compared
    - Numerator/denominator and rate for each window
+   - **For any event-based metric: the production/preview split, as its own column.** If preview traffic is a meaningful share, say so in the direction line, not in a footnote — "20 clicks, 13 of them Vercel previews" is the finding, "20 clicks" is a wrong one.
    - Direction: improved / regressed / flat / not enough data
    - Any **confounder** — another ticket that shipped into the same surface in the same window. Check recently-completed NEX tickets touching the same pages. If one exists, say the read is **unattributable** rather than claiming a result.
    - Your recommendation: keep monitoring / ready to close / looks like a regression
