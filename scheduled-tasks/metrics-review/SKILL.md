@@ -15,6 +15,35 @@ This holds even when the user redirects mid-review — a request to go fix or sh
 
 Why: the review's value is the *complete* picture — which tickets are stuck, which are unreadable, which nobody has actioned. Half a review posted, plus a day of work on one ticket, leaves the other tickets with no record for that day and no way to tell later whether they were read at all. This has already happened once (2026-08-10: the review was abandoned at ticket 5 of 10 to work NEX-552, and the remaining comments were only posted after the user asked).
 
+## 🚨 Spin deeper investigation out into its own session — early
+
+This review **reads and reports**. The moment a finding turns into *work*, stop and hand it off with `spawn_task` rather than doing it inline.
+
+**The bright line.** Bounded checks that close a question you already have are part of the review — run them:
+
+- a SQL query, a `curl`, a `$host` split, a live-vs-expected comparison on a handful of pages
+- the discriminating check that separates two candidate causes (see *Investigate before escalating*, below — that rule still stands and this one does not override it)
+
+Open-ended work that *generates* new questions is not part of the review — hand it off:
+
+- reading render internals to decide what a metric should mean
+- writing or changing code, creating a worktree, running builds or test suites
+- auditing a sample of N pages, or any check whose scope you'd have to choose
+
+**Concrete triggers — any one of these means spin out now, not after one more look:**
+
+1. You are about to create a worktree, edit a file, or run a build/test suite.
+2. You've said "let me check one more thing" twice on the same ticket.
+3. The finding requires a **design decision** ("what should this number count?") rather than a measurement.
+4. You've asked the user two consecutive questions about the same ticket.
+5. The next step needs more than ~3 tool calls to reach an answer.
+
+**How to hand off:** `spawn_task` with a self-contained prompt — the evidence you already gathered (tables, numbers, file:line), what to do next, the constraints (report-only on Linear state, don't move the ticket), and any unrelated findings flagged as *separate, do not fold in*. Then post the same evidence as a Linear comment so the ticket carries it, and **return to the walkthrough**.
+
+Why: on 2026-08-17 a single NEX-661 finding (a title over-claiming its dupe count) expanded inside the review into a count-definition debate, a read of the page's render internals, a worktree, and finally a live-SERP audit that invalidated the ticket's whole instrument. All of it was *useful* — and none of it belonged in a metrics review. The walkthrough got to item 1 of 10. The audit became its own session in the end; it should have from the moment it needed a design decision.
+
+A spun-out investigation is not a deferral. It is the same work, in a session that can actually hold it.
+
 ## What to do
 
 1. **Find the tickets.** `mcp__linear-server__list_issues` with `team: "Nextbest"`, `state: "Monitoring"`. If none, post nothing anywhere and reply with one line: "No tickets in Monitoring." Then stop.
@@ -138,7 +167,7 @@ Rules for the walkthrough:
 - **Skip the tickets with nothing to decide.** "Keep monitoring, nothing due until 09-08" belongs in the digest, not as its own turn.
 - **Give a recommendation, not a menu.** Say what you'd do and why; offer the alternative in a sentence. Where a call is genuinely hers (an AC being read down, a criterion being rewritten), say that plainly.
 - **State plainly when you can't verify something**, and give the manual steps so she can in seconds. Never let "I couldn't reach it" pass as "it's fine".
-- **Investigate before escalating.** If a finding has two candidate causes with opposite implications, run the discriminating query and report the answer — don't hand her an open question you could have closed. (2026-08-13: a 7% link-coverage drop looked like silent rot; one query showed 0 stale spans out of 264 and cleared it.)
+- **Investigate before escalating.** If a finding has two candidate causes with opposite implications, run the discriminating query and report the answer — don't hand her an open question you could have closed. (2026-08-13: a 7% link-coverage drop looked like silent rot; one query showed 0 stale spans out of 264 and cleared it.) **Bounded to the bright line at the top of this file** — one query that closes the question, not an investigation that opens three more. If closing it needs a design decision or a worktree, `spawn_task` instead.
 
 ### Durable formatting note
 
