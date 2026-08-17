@@ -173,12 +173,16 @@ mcp__linear-server__create_issue with:
 - PR created → `state: "In Review"`, add PR URL to description
 - PR merged → `state: "Monitoring"` (named a metric) or `state: "Done"` (nothing to measure)
 - Metric read and all ACs re-verified → `state: "Done"`
-- Blocked → Add "blocked" label, move to "Backlog" state
-- Unblocked → Remove "blocked" label
+- Blocked / deliberately deferred → Add the **`parked`** label, move to `"Backlog"` state, and **write the unpark trigger in a comment**
+- Unparked → Remove the `parked` label, restore the prior state
+
+**There is no `blocked` label.** This file said there was until 2026-08-17, and `save_issue` hard-rejects an unresolvable label name (it replaces the whole set, so it refuses rather than silently dropping) — so following the old instruction failed the call outright. The Nextbest workspace has exactly five issue labels: `parked`, `SEO`, `Bug`, `Feature`, `Improvement`. **Confirm with `list_issue_labels` before using any label not in that list** — labels are per-workspace and this list will drift.
+
+`parked` is also the better concept. Its definition: *"Deliberately deferred with a written unpark trigger — not backlog, not cancelled. The idea is sound; the timing isn't."* **The written trigger is the point** — a parked ticket without a stated condition that brings it back is just a backlog item with extra styling. Write the condition as an *observable*, never a date: "the 08-19 read shows a non-zero link CTR", not "after the 19th". A date alone unparks the ticket whether or not the thing it was waiting on ever happened. (2026-08-17: NEX-651 and NEX-652 were parked behind NEX-650's kill-signal read on exactly these terms.)
 
 Search → Get issue → Update with `mcp__linear-server__update_issue`.
 
-**Note**: Always preserve the Bug/Feature/Improvement label when updating tasks.
+**Note**: Always preserve the Bug/Feature/Improvement label when updating tasks — `labels` replaces the full set, so pass the existing ones back explicitly alongside any you add.
 
 ### Linear vs TodoWrite
 
