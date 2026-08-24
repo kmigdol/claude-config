@@ -132,6 +132,22 @@ Do NOT proceed to implementation until the team lead approves your criteria.
 
 ## Phase 2: Implementation (after approval)
 
+**You are the end-to-end owner of this ticket.** Once your acceptance criteria
+are approved, everything from implementation through the finished PR is yours
+to drive in one continuous run. Completing a task-list item, a subtask, a test
+pass, or any intermediate step is NOT a stopping point — do not pause to
+report progress, do not end your run to "check in", do not wait between steps.
+The only times you stop and wait are:
+
+1. Phase 1 (above) — after proposing acceptance criteria, before approval
+2. A blocker you cannot resolve after 3 genuine attempts — report it via
+   SendMessage with what you tried
+3. After the PR exists, CI is green, and Linear is In Review — report and
+   stay alive for feedback (see below)
+
+"I finished subtask N" is never a reason to stop. If you find yourself
+summarizing progress and listing next steps, execute the next step instead.
+
 Once your acceptance criteria are approved, follow the `starting-linear-ticket`
 skill workflow with these modifications:
 
@@ -232,6 +248,7 @@ Shut down team: SendMessage type "shutdown_request" to each agent, then TeamDele
 - **Max 4 agents simultaneously** — resource constraints
 - **Each agent gets its own worktree** — no shared workspace
 - **Agents STOP after proposing acceptance criteria** — user must approve before implementation
+- **After AC approval, agents own their ticket end to end** — no stopping between subtasks; the next report from an agent should be a finished PR (or an escalated blocker). If an agent checks in with a mid-ticket progress summary, the lead replies telling it to continue to PR — don't treat the check-in as a completed handoff.
 - **User approves queue order before starting** — no surprises
 - **Preserve existing Linear labels** when updating issue status
 - **Lead NEVER does implementation directly** — all work (code, tests, fixes, CI debugging, ad-hoc bugfixes, quick UI tweaks) must be delegated to agents or subagents. The lead coordinates, reviews, and communicates with the user. If the user reports a bug or requests a change during the run, spawn a subagent to fix it — do NOT edit code yourself, even if it seems trivial.

@@ -11,6 +11,25 @@ Complete end-to-end workflow for Linear tickets: fetch → in progress → workt
 
 **Announce at start:** "I'm using the starting-linear-ticket skill to set up for this ticket."
 
+## Ticket Ownership — Drive to PR, Don't Stop Between Steps
+
+Whoever runs this workflow — you, or an agent spawned to execute it — is the **end-to-end owner of the ticket**. The deliverable is a PR with green CI and Linear in "In Review", not a partially completed task list. Finishing a step, a task-list item, or a subtask is NOT a stopping point: mark it done and proceed to the next step immediately, in the same turn.
+
+**Stop ONLY at the explicit checkpoints this workflow defines:**
+
+| Checkpoint | Why it stops |
+|---|---|
+| Step 1 — ticket has no acceptance criteria | User must supply them |
+| Step 1.5 — Sequencing or Blocked conflict verdict | User's call to override |
+| Step 4 Path B — brainstorming questions | Needs user answers |
+| Step 4.7 — UI prototype sign-off | User approves the look |
+| Step 9 — code review findings presented | User sees review before CI |
+| Step 11 — local deploy for manual testing (UI only) | User tests the change |
+| Step 13 — merge | NEVER merge without explicit approval |
+| A blocker you genuinely cannot resolve | Escalate with what you tried |
+
+Between those checkpoints, keep going without reporting back or waiting. A one-line status update mid-work is fine; ending your turn is not. "I finished the X subtask" is never a reason to stop — subtasks are internal structure, not deliverables. If you catch yourself writing a progress summary followed by "next I'll…", that next step is yours to do right now.
+
 ## Required Input
 
 User provides ticket identifier (e.g., "PROJ-63", "start PROJ-63", or just the number if context is clear).
@@ -583,6 +602,9 @@ Report completion with PR URL.
 - "The metric moved, ship it as Done" (re-read EVERY acceptance criterion first, not just the metric)
 - "Linear already flipped it to Done on merge, so it must be fine" (that's the GitHub integration, not a verification)
 - "I'll file a follow-up for the rest and close this one" (goal-completing work — remediation, measurement, e2e — stays in THIS ticket; an AC is never satisfied by filing a ticket for it)
+- "That subtask is done — good stopping point, I'll report back" (subtasks are internal structure; you own the ticket to PR — keep going)
+- "I'll pause here in case the user wants to redirect" (the checkpoints where the user weighs in are enumerated; this isn't one of them)
+- "Let me summarize progress and outline next steps" (if you can outline the next step, do it now instead)
 
 **All of these mean: Follow the workflow. No shortcuts.**
 
