@@ -111,7 +111,13 @@ Task tool:
   team_name: "todo-runner"
   name: "agent-{issue-identifier}"  (e.g., "agent-nex-170")
   mode: "default"
+  model: "opus"   # ONLY if the lead (you) is running on Fable — see below
 ```
+
+**Model selection:** check which model YOU (the lead) are running on — your system
+prompt states it. If you are Fable (`claude-fable-5`), pass `model: "opus"` on every
+implementation agent spawn so implementation runs on Opus. On any other model, omit
+`model` (agents inherit yours).
 
 **Agent prompt template:**
 
@@ -263,7 +269,7 @@ Shut down team: SendMessage type "shutdown_request" to each agent, then TeamDele
 | Map dependencies | Build priority queue | Manual analysis |
 | Present queue | Show order + deps to user | Direct output |
 | Create team | Set up coordination | `TeamCreate` |
-| Spawn agent | Fill an open slot | `Task` (general-purpose) |
+| Spawn agent | Fill an open slot | `Task` (general-purpose; `model: "opus"` if lead is Fable) |
 | AC approval | Review with user | `SendMessage` |
 | PR merge | Per-PR as they finish | `gh pr merge` |
 | Fill slot | Next eligible ticket | Check queue → spawn |

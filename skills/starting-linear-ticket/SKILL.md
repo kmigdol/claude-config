@@ -57,7 +57,7 @@ When using a team, the lead agent should:
 1. **Fetch all tickets** from Linear first to understand scope and dependencies
 2. **Create a team** with `TeamCreate`
 3. **Create tasks** from ticket requirements with `TaskCreate`
-4. **Spawn teammate agents** with `Task` tool (`subagent_type: "general-purpose"`, include `team_name`)
+4. **Spawn teammate agents** with `Task` tool (`subagent_type: "general-purpose"`, include `team_name`; add `model: "opus"` if the lead is running on Fable — see Step 6 model selection)
    - Each teammate gets: ticket ID, requirements, acceptance criteria, target repo, branch name
    - Each teammate runs the full workflow (worktree → brainstorm → TDD → verify → PR → code review)
 5. **Coordinate** — monitor progress, resolve blockers, handle cross-repo dependencies
@@ -301,6 +301,7 @@ After creating the task list in Step 5, dispatch implementation tasks to subagen
 
 1. **Identify independent tasks** — tasks that don't depend on each other can run in parallel
 2. **Dispatch each task** using `Task` tool with `subagent_type: "general-purpose"`
+   - **Model selection:** check which model YOU (the main agent) are running on — your system prompt states it. If you are Fable (`claude-fable-5`), pass `model: "opus"` on every implementation dispatch so implementation runs on Opus. On any other model, omit `model` (subagents inherit yours).
 3. **Include full context** in each subagent prompt:
    - The worktree path (so they edit the right files)
    - Which files to modify and what changes to make
@@ -498,7 +499,7 @@ Report completion with PR URL.
 | 4.5 | Snapshot Freshness Check (Path A) | Probes from `freshness-check.md`. On failure: Rescue Scout writes `<worktree>/SNAPSHOT.md`. |
 | 4.7 | UI Prototype Check (if substantial UI) | Throwaway prototype with real data → screenshot desktop+mobile → user signs off on the look before TDD |
 | 5 | Create task list | `TaskCreate` + `TaskUpdate` for dependencies |
-| 6 | Implement | Subagents (`Task` tool, `general-purpose`) with TDD |
+| 6 | Implement | Subagents (`Task` tool, `general-purpose`; `model: "opus"` if the main agent is Fable) with TDD |
 | 7 | Verify (unit + E2E + manual) | Subagent (`Bash`) or `superpowers:verification-before-completion` |
 | 8 | Create PR | `gh pr create` |
 | 9 | Code review | Project `scaled-code-review` skill (if exists) OR `superpowers:code-reviewer` agent |
@@ -540,7 +541,7 @@ Report completion with PR URL.
 
 ### Implementing tasks sequentially instead of with subagents
 - **Problem:** Doing each task yourself blocks the main context and is slower
-- **Fix:** Dispatch independent implementation tasks to subagents in parallel. Use `Task` tool with `subagent_type: "general-purpose"` and include full context (worktree path, files to modify, acceptance criteria).
+- **Fix:** Dispatch independent implementation tasks to subagents in parallel. Use `Task` tool with `subagent_type: "general-purpose"` (plus `model: "opus"` if the main agent is Fable) and include full context (worktree path, files to modify, acceptance criteria).
 
 ### Skipping TDD for "urgent" tickets
 - **Problem:** Untested code ships with bugs
