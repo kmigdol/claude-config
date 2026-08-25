@@ -199,7 +199,7 @@ Each agent sends proposed acceptance criteria via SendMessage. The lead:
 
 After approval, agents proceed autonomously through implementation → test → PR → code review.
 
-Agents should run the `superpowers:code-reviewer` on their own PR and fix Critical/Important issues before reporting back.
+Agents should run the `superpowers:code-reviewer` on their own PR and fix Critical/Important issues before reporting back. Same model rule as the spawn block: an agent running on Fable passes `model: "opus"` when spawning its reviewer; otherwise omit `model`.
 
 Monitor via TaskList. If an agent reports a blocker, help resolve it.
 

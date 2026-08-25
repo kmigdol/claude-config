@@ -436,6 +436,7 @@ After creating the PR, run a code review before checking CI. This catches logic 
 
 **How to run the review:**
 - Use the Task tool with `subagent_type: "superpowers:code-reviewer"` to spawn a review agent
+  - **Model selection:** same rule as Step 6 — if you are running on Fable, pass `model: "opus"` on the review agent spawn; otherwise omit `model`.
 - Provide the PR number, worktree path, and a summary of what was changed
 - The reviewer will read the diff and report issues categorized as Critical / Important / Suggestion
 
@@ -502,7 +503,7 @@ Report completion with PR URL.
 | 6 | Implement | Subagents (`Task` tool, `general-purpose`; `model: "opus"` if the main agent is Fable) with TDD |
 | 7 | Verify (unit + E2E + manual) | Subagent (`Bash`) or `superpowers:verification-before-completion` |
 | 8 | Create PR | `gh pr create` |
-| 9 | Code review | Project `scaled-code-review` skill (if exists) OR `superpowers:code-reviewer` agent |
+| 9 | Code review | Project `scaled-code-review` skill (if exists) OR `superpowers:code-reviewer` agent (`model: "opus"` if the main agent is Fable) |
 | 10 | Check CI | `gh pr checks --watch` → fix failures if any |
 | 11 | Local deploy (if UI) | `npm run dev` in worktree → user manual tests → wait for feedback |
 | 12 | Update Linear | `mcp__linear-server__update_issue` → In Review |
@@ -565,7 +566,7 @@ Report completion with PR URL.
 
 ### Skipping code review before CI
 - **Problem:** Issues found after CI passes, requiring another push/CI cycle
-- **Fix:** Always run the `superpowers:code-reviewer` agent after creating the PR. Fix Critical/Important issues before checking CI. Present findings to user for their review.
+- **Fix:** Always run the `superpowers:code-reviewer` agent after creating the PR (`model: "opus"` if the main agent is Fable). Fix Critical/Important issues before checking CI. Present findings to user for their review.
 
 ### Marking PR as "In Review" without checking CI
 - **Problem:** PR has failing CI, reviewer wastes time reviewing broken code
