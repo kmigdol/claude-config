@@ -280,6 +280,15 @@ Explicit cases the implementer must write — each becomes a failing test first:
 - <e.g., missing slug returns 404>
 - <e.g., malformed slug normalized to lowercase>
 
+### Baseline — captured BEFORE the work starts
+Any AC that compares an "after" number to a "before" number needs the before-number recorded **here, at ticket-creation time** — dated, with the exact query or command and its source. Not "we'll measure it when we merge".
+- <e.g., `/rest/v1/comments` rows per production build at the merge base: 356,191 — measured 2026-08-24 from `edge_logs`, isolated by builder IP, using `end - start + 1`>
+- <e.g., affiliate CTR pre-rollout: 22 clicks / 399 PDP views = 5.51% — production host, crawler-filtered, 08-21→08-25>
+
+**On a short-retention source this is urgent, not tidy.** `edge_logs` keeps 24h; Railway keeps the latest deploy only; PostHog funnels get re-shaped by the next ship into the same surface. If the baseline is not captured before the change lands, the comparison is not "harder later" — it is **permanently impossible**, and the AC can then be neither met nor failed. It just reads as unread forever.
+
+**Both readings must use the same expression.** A metric redefined between them — a corrected row formula, a changed filter, a new event property joining the series — makes them incomparable even when both numbers exist.
+
 ### Post-Merge Verification
 Runnable commands the agent executes during canary:
 - <e.g., `curl -s https://nextbest.one/concern/acne | grep -q 'data-testid="concern-summary"'`>
@@ -351,6 +360,10 @@ Project-specific traps relevant to this change:
 - **Problem:** Original closes "Done" with its goal unmet; the goal-completing work (remediation, measurement, e2e coverage) rots in Backlog as a fragment
 - **Fix:** Gate 3. The work stays in the parent ticket — reopen the parent if it's closed
 
+### A before/after AC with no "before"
+- **Problem:** The ticket names a comparison ("rows fall ≥60%", "CTR rises from its 0.42% baseline") but nobody records the baseline before the work ships. On a short-retention source the number becomes unrecoverable and the AC can never be met or failed — NEX-691 lost its ≥60% egress AC exactly this way: correctly written, never measured, 24h window closed
+- **Fix:** Fill in `## Baseline` when the ticket is created, with the dated query. If the baseline cannot be measured yet, the AC is not ready to be written
+
 ### Refiling instead of reopening
 - **Problem:** "X still broken after NEX-YYY" filed as a new ticket lets NEX-YYY stand as Done when it failed
 - **Fix:** Gate 2. Reopen NEX-YYY with a comment on what the fix missed
@@ -362,6 +375,7 @@ Project-specific traps relevant to this change:
 - "We can figure out the architecture during implementation"
 - "I'll file a follow-up for the remediation/measurement/e2e part" (Gate 3 — it stays in the parent)
 - "The outcome is implied" (write it down; if you can't, it's not a ticket)
+- "We'll grab the baseline when we measure the result" (on a 24h-retention source that number will not exist by then)
 - "The title says what's broken, that's clear enough" (a title says what will be true after, not what's true now)
 
 **All of these mean: Run the workflow. Cheap questions now save expensive rework later.**
