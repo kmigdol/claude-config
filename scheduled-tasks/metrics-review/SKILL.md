@@ -75,6 +75,49 @@ The distinction, because it is easy to blur:
 
    **If the ticket carries an explicit exit checklist** — a "Post-Merge Verification", "Monitoring Exit Checklist", or similar section listing concrete queries/commands — **run every item in it and report each result separately.** That checklist is the ticket author's own definition of done; it outranks your judgement about which single observable matters. A checklist item you skipped is reported as unread, and the ticket cannot be recommended for close while any item is unread.
 
+### Ticket-specific checks currently armed
+
+Run these IN ADDITION to the ticket's own observables. Each names its own removal condition — **delete the entry when that condition is met**; this list is not meant to accumulate.
+
+#### NEX-734 — is the NEX-668 variant annotation actually being written?
+
+*Armed 2026-08-31. Remove once answered either way.*
+
+C7 (`near_sibling`) is this ticket's load-bearing dedup control, and it works by reading `evidence_json.variant_suggestion`, which the `annotate_pending` pass writes earlier in the same run. On 2026-08-31 a proposal was found that SHOULD carry an annotation and did not — its candidate bucket resolves cleanly to one catalogued product:
+
+```
+proposal : "Green Clean Cleansing Balm makeup + SPF melting cleansing"  (Farmacy, cleansing balm)
+catalog  : "Green Clean Makeup Removing Cleansing Balm"                 (20 mentions)
+both stem to "green clean"; same brand_id; same category
+```
+
+Kayleigh confirmed these are two SIZES of one product, i.e. a genuine duplicate that C7 must refuse. The benign explanation is that the proposal is simply newer than the last `annotate_pending`. The alternative — the pass silently skips rows — would mean C7 is blind far more often than it looks, and that blocks re-enabling `AUTO_APPROVE_PRODUCTS_ENABLED`.
+
+**Run (the daily pipeline is 10:00 UTC; this task runs 16:00 UTC, so the annotation should exist):**
+
+```sql
+select coalesce((evidence_json->'variant_suggestion')::text, 'NO ANNOTATION') as annotation,
+       status
+from taxonomy_proposals
+where dossier_json->>'canonical_full_name' ilike 'Green Clean%'
+  and proposal_type = 'new_product';
+```
+
+Then, from the repo, the gate's own view — read-only, applies nothing:
+
+```bash
+cd /Users/kayleigh/dev/nextbest/pipeline && \
+  railway run --service nextbest --environment production -- \
+  uv run python scripts/nex734_revalidate_auto_approve.py
+```
+
+**Report:**
+- **Annotation present** and the Green Clean row is gone from SWEEP 1 / the qualifier set → C7 is working; say so plainly, and this entry can be removed.
+- **Annotation still absent** → a NEX-668 defect. Say so, do NOT recommend re-enabling the flag, and `spawn_task` to investigate `annotate_pending` (it is code work, so it does not belong in the review).
+- Also report SWEEP 2 and SWEEP 3 hit counts (bar: 0 each) and the qualifier count.
+
+Note `AUTO_APPROVE_PRODUCTS_ENABLED` is **unset** on production `prefect-worker`, so this ticket's own Outcome metric (the approve-ready queue falling) CANNOT move. Do not report that as "flat" — it is **not running**, which is a different finding. The remaining work is a human pass over the qualifier set (AC 1), then setting the flag.
+
 3. **Read the metric from wherever it actually lives.** Most Monitoring tickets here are pipeline/infra work, and their observables are **not** PostHog events. Pick the source from the ticket:
    - **PostHog** — traffic, funnel and CTR metrics. Use the PostHog MCP tools (`mcp__a1b28c81-1281-4eee-a940-e5db946cc335__*`; find them with ToolSearch, query "posthog query insight").
    - **Supabase MCP (`execute_sql`)** — counts, audit queries, queue depths, `pipeline_stage_runs`. This is the most common case.
