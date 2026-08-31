@@ -69,6 +69,18 @@ The distinction, because it is easy to blur:
 
 1. **Find the tickets.** `mcp__linear-server__list_issues` with `team: "Nextbest"`, `state: "Monitoring"`. If none, post nothing anywhere and reply with one line: "No tickets in Monitoring." Then stop.
 
+   🚨 **There are TWO Linear MCP servers, and `linear-server` is the one that keeps failing auth.** The other is UUID-named — `mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__*` — exposes the same tools against the same workspace, and has been live on every occasion `linear-server` was not (2026-08-22, 08-26, 08-28, 08-31). **The string "linear" appears NOWHERE in its tool names**, so searching for "linear" returns nothing and it looks like Linear is simply unavailable.
+
+   This matters more here than anywhere else: an unauthenticated `linear-server` makes step 1 return no tickets, and this task then reports **"No tickets in Monitoring"** and stops — which is indistinguishable from a genuinely empty queue. A silent no-op that reads as a clean run.
+
+   **So: if `linear-server` is unavailable, do NOT conclude there are no tickets.** Load the fallback and retry:
+
+   ```
+   ToolSearch → select:mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__list_issues,mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__get_issue,mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__save_comment
+   ```
+
+   Only report "No tickets in Monitoring" after a *successful* listing returned zero. If BOTH servers are unreachable, say the review could not run and why — never let an auth failure render as an empty queue.
+
 2. **For each ticket**, `mcp__linear-server__get_issue` and find the metric it named — look for a "Post-ship" or "Analytics" acceptance criterion, or a Measured-impact section. It usually names a specific PostHog event and a denominator, e.g. "Google-organic card+hero clicks per `alternatives_section_viewed`".
 
    If the ticket names **no** metric, comment once saying it's in Monitoring without a named metric and should either get one or move to Done, then move on. Do not invent a metric for it.
