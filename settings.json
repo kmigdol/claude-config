@@ -19,6 +19,18 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/linear-servers-reminder.sh",
+            "timeout": 5,
+            "statusMessage": "Linear server rule"
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {

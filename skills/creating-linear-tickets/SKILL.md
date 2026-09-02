@@ -15,6 +15,21 @@ Every ticket created by this skill has validated scope, reviewed architecture, c
 
 **Announce at start:** "Using creating-linear-tickets to turn this idea into actionable tickets."
 
+## Step 0 — Resolve the Linear server (every run, before anything else)
+
+Two Linear MCP servers exist: `mcp__linear-server__*` and a UUID-prefixed connector
+(`mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__*`). A startup reminder that `linear-server` needs
+auth says nothing about the connector. Before reading or writing anything, run:
+
+```
+ToolSearch "save_issue get_issue list_issues list_issue_labels save_comment"
+```
+
+Bare verbs only — the connector's names contain no "linear", so a `+linear` or
+`select:mcp__linear-server__…` search finds nothing. Use whichever prefix the search returns for
+every `mcp__linear-server__…` call named below. Say "Linear is unavailable" only after that search
+returns nothing, and re-run it at the moment of the write if it did.
+
 ## Required Input
 
 An idea, feature request, bug report, or initiative. Can be:

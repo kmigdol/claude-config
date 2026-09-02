@@ -145,6 +145,14 @@ digraph workflow {
 }
 ```
 
+### Step 0: Resolve the Linear server
+
+Two Linear MCP servers exist (`mcp__linear-server__*` and the UUID-prefixed connector
+`mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__*`); they fail independently and the startup auth
+reminder only describes the first. Run `ToolSearch "get_issue save_issue list_issues save_comment"`
+(bare verbs, never the word "linear") and use whichever prefix comes back for every
+`mcp__linear-server__…` call below. Only an empty result from that search means Linear is unavailable.
+
 ### Step 1: Fetch Ticket from Linear
 
 ```

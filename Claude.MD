@@ -191,9 +191,28 @@ Search → Get issue → Update with `mcp__linear-server__update_issue`.
 
 Use both together.
 
-### Timeouts
+### Two Linear MCP servers — resolve the prefix BEFORE claiming Linear is unavailable
 
-If Linear MCP times out, ask user to run `/mcp` to re-authenticate.
+Linear is wired twice: `mcp__linear-server__*` and a UUID-prefixed claude.ai connector
+(`mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__*`, same tool surface: `save_issue`, `save_comment`,
+`get_issue`, `list_issues`…). They fail independently. **The startup reminder that says
+`linear-server` needs authentication is a statement about that one server instance, not about
+Linear** — the connector is usually live, and it has been reported "unavailable" in error at
+least five times (2026-08-22, -26, -28, -31 twice, 09-01).
+
+The one check that settles it, every time, before any "Linear is unauthenticated" sentence:
+
+```
+ToolSearch "save_issue get_issue list_issues save_comment"
+```
+
+Search by the **bare tool verb, never by the word "linear"** — the connector's tool names carry
+a UUID, not a product name, so `+linear …` and `select:mcp__linear-server__…` both return
+nothing and prove nothing. Use whichever prefix comes back. Only after the bare-verb search
+returns nothing may you say Linear is unavailable, and re-run it at the moment you need the
+write (the connector can attach mid-session). Full history: memory
+`reference_two_linear_mcp_servers`. The `mcp__linear-server__…` names in this file and in the
+skills mean "the Linear tool of that name on whichever server is live".
 
 ---
 
