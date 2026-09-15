@@ -1,6 +1,6 @@
 ---
 name: catalog-review
-description: Daily research of pending alias_flag and new_product taxonomy proposals with parallel web agents; writes verdicts into each proposal's dossier and posts a digest on NEX-798. Report-only unattended — applies nothing; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
+description: Daily research of pending alias_flag and new_product taxonomy proposals with parallel web agents; writes verdicts into each proposal's dossier and replies with a digest (no Linear comment). Report-only unattended — applies nothing; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
 ---
 
 Daily catalog audit for the nextbest taxonomy proposal queue. It researches pending
@@ -13,9 +13,10 @@ the **MAIN checkout**, not a worktree. That file is the authority on the helper'
 research prompts, the dossier fields `write-research` writes, and the digest format; this file
 says what a scheduled run does with them. Read it first, every run.
 
-Repo: `/Users/kayleigh/dev/nextbest`. Linear team: `Nextbest` (key NEX). Post the digest as a
-comment on **NEX-798** while that ticket is open; if it is Done or Canceled, post no comment and
-just reply with the digest.
+Repo: `/Users/kayleigh/dev/nextbest`. **The digest is the reply only — post NO Linear comment.**
+NEX-798 left Monitoring (2026-09-15) and Kayleigh said to stop commenting on it; do not look for
+another ticket to post to. SKILL.md's "post it as a Linear comment" steps do not apply to this
+routine — this line overrides them.
 
 ## 🚨 Unattended means report-only
 
@@ -29,29 +30,10 @@ a status change.
 
 ## 🚨 Finish the digest before acting on anything
 
-Research both lanes, write the research back, and post the digest **before** starting work on any
-individual finding. The digest is a single deliverable; a half-posted digest plus an hour on one
+Research both lanes, write the research back, and reply with the digest **before** starting work on any
+individual finding. The digest is a single deliverable; a half-finished digest plus an hour on one
 interesting card leaves the rest of the run with no record. This holds when Kayleigh redirects
 mid-run: say you are finishing the digest first (it takes a minute), then pick up her request.
-
-## 🚨 There are TWO Linear MCP servers
-
-`linear-server` is the one that keeps failing auth. The other is UUID-named —
-`mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__*` — exposes the same tools against the same
-workspace, and has been live on every occasion `linear-server` was not. **The string "linear"
-appears NOWHERE in its tool names**, so searching for "linear" returns nothing and it looks like
-Linear is simply unavailable.
-
-Before writing any sentence saying Linear is unavailable, search by the **bare tool verb**:
-
-```
-ToolSearch → select:mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__get_issue,mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__save_comment
-```
-
-The startup reminder that `linear-server` needs authentication is a statement about that one
-server instance, not about Linear. Only after a bare-verb search returns nothing may you say
-Linear is unreachable — and then still reply with the digest, saying the comment could not be
-posted.
 
 ## Preconditions
 
@@ -123,7 +105,7 @@ posted.
    Group those cards by `agent.decision_class`. This includes rows earlier runs researched and
    nobody has actioned yet — that backlog is exactly what the digest is for.
 
-7. **Post the digest** as a Linear comment on NEX-798 (while open), then reply with it.
+7. **Reply with the digest.** No Linear comment.
 
 ## When Kayleigh is present
 
@@ -150,22 +132,20 @@ Only if she replies in this session. Then run SKILL.md's **Present mode** walkth
   first, then the `status = 'pending'`-guarded dossier update, then `apply --dry-run`.
 - A class she did not name is untouched: not held, not rejected, still pending for
   `/admin/taxonomy`.
-- At the end, take a `counts` after-snapshot and post it as a comment alongside the before, with
+- At the end, take a `counts` after-snapshot and report it in the reply alongside the before (no Linear comment), with
   the promote narration (a `promote` creates a NEW pending `new_product` row, so `new_product`
   pending *rises* — say the number or the delta reads as a regression).
 
 ## Failure handling
 
 - **Any helper command exiting non-zero: stop.** Do not run the next command, do not apply
-  anything. Put the command and its error in the digest and post it — a run that stopped early
+  anything. Put the command and its error in the digest and reply with it — a run that stopped early
   with a stated reason is a finding; a silent partial run is not.
 - **An agent batch that fails or returns unusable JSON:** consolidate the batches that succeeded,
   run `write-research` on those, and list the failed batch's `card_id`s in the digest under
   `unresearched` with the reason. Never invent findings for them.
 - **A `write-research` abort on validation:** fix the findings file (downgrade the uncited
   findings to `undecided`) and re-run it. Do not pass a hand-edited recommendation.
-- **Linear unreachable after the two-server check:** still reply with the digest, and say the
-  comment could not be posted.
 
 ## Judgement rules
 
@@ -190,7 +170,7 @@ Only if she replies in this session. Then run SKILL.md's **Present mode** walkth
 
 ### Step 1 — the digest (always)
 
-Post as a Linear comment on NEX-798 (while open) and reply with the same text:
+Reply with this text (no Linear comment):
 
 ```
 **catalog-audit — <date>** · run <duration> · pending before: alias_flag <N>, new_product <N>
