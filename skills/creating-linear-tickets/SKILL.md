@@ -290,10 +290,16 @@ Declarative "what's true after this ships":
 - <e.g., Sentry shows zero new errors in `app/concern/[slug]/page.tsx` for 1 hour post-deploy>
 
 ### Test Scenarios (TDD inputs)
-Explicit cases the implementer must write — each becomes a failing test first:
-- <e.g., looks up tag by slug, returns matching summary>
-- <e.g., missing slug returns 404>
-- <e.g., malformed slug normalized to lowercase>
+Explicit cases the implementer must write — each becomes a failing test first. **Name the layer
+for each one**, and put it where it can hold: pure functions → unit test; data invariants → SQL /
+build-time guard; pipeline invariants → that suite; rendered structure, geometry and interaction
+→ e2e. A scenario written as "e2e asserts product X shows N mentions" specifies a spec that will
+fail on data drift rather than on a regression — rewrite it as a structural assertion plus a unit
+or data check. See "Put each assertion at the layer that can hold it" in `~/.claude/CLAUDE.md`.
+- <e.g., unit: looks up tag by slug, returns matching summary>
+- <e.g., unit: missing slug returns 404>
+- <e.g., unit: malformed slug normalized to lowercase>
+- <e.g., e2e: the summary section renders non-empty on a run-time-resolved topic page, no overflow at 375px>
 
 ### Baseline — captured BEFORE the work starts
 Any AC that compares an "after" number to a "before" number needs the before-number recorded **here, at ticket-creation time** — dated, with the exact query or command and its source. Not "we'll measure it when we merge".

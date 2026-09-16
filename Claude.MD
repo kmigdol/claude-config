@@ -72,6 +72,31 @@ This applies even when the path seems obvious. Do NOT skip this for "simple" tas
 - No PR should be created without passing tests
 - Run `npm test` (or project-equivalent) before committing
 
+### Put each assertion at the layer that can hold it
+
+**A browser test asserts structure and readability. It does not assert content.** Decided
+2026-09-15 for nextbest e2e (the full rule and its allowed/not-allowed table live in that
+project's `.claude/CLAUDE.md`, NEX-719); the principle is general.
+
+| It asserts… | Home |
+|---|---|
+| A pure function's output (titles, labels, formatting, normalization) | unit test next to the source |
+| A data invariant (no NULL image, no orphan row) | SQL check / build-time guard |
+| A pipeline or backend invariant | that layer's test suite |
+| Rendered structure, geometry, readability, interaction | e2e |
+
+An e2e spec that names a specific record, asserts a row count, or pins an exact copy string
+fails when the data or the wording changes — not when the product breaks. On nextbest that
+produced 9 separate "fix the tests" tickets in ~4 months and ~19 test-only repair commits.
+Resolve fixtures at run time and **throw** when nothing qualifies; never `test.skip` on an
+absent premise, because a spec that skips when its fixture degrades cannot fail for the right
+reason either.
+
+**Deleting a test that keeps breaking is only allowed when you name its replacement at
+file-and-line AND prove that replacement can fail** by breaking the source. Check first whether
+the spec is red because of a *real defect*: twice on nextbest a spec written off as fixture rot
+was the only thing guarding a live production bug (NEX-739, NEX-227).
+
 ---
 
 ## Task Tracking with Linear

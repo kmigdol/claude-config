@@ -393,6 +393,25 @@ If the project has E2E tests:
 3. Wait for all E2E tests to pass before creating PR
 4. Stop servers after tests complete
 
+**Any e2e spec you ADD asserts structure and readability, never content** (see "Put each
+assertion at the layer that can hold it" in `~/.claude/CLAUDE.md`, and the full allowed /
+not-allowed table in the project's `.claude/CLAUDE.md`). No specific record by name or slug, no
+row counts, no exact copy strings, no word counts on generated prose — those belong in a unit
+test, a SQL/data check, or the owning layer's suite. Resolve fixtures at run time and **throw**
+when nothing qualifies; a `test.skip` on an absent premise is a spec that cannot fail for the
+right reason.
+
+**When an existing e2e fails, classify before fixing:**
+
+| Cause | Action |
+|---|---|
+| Real regression from your diff | fix the code |
+| Real *pre-existing* defect the spec correctly caught | STOP — reopen or file the owning ticket; do NOT make the spec self-healing to get green |
+| The spec asserts content that legitimately changed | move the assertion down a layer; deleting it requires naming the replacement at file-and-line AND proving that replacement can fail |
+
+Never reach green by weakening a spec before you know which of the three you have. Query
+production or the DB to tell a defect from drift.
+
 **Chat/agent backend changes:**
 When modifying agent behavior (system prompt, tool routing, fallback logic, tools), write E2E tests that verify the agent makes the right tool calls with the right arguments. See the project's `testing-langgraph-backend` skill if available.
 
