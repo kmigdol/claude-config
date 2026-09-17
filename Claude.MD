@@ -81,6 +81,7 @@ project's `.claude/CLAUDE.md`, NEX-719); the principle is general.
 | It asserts… | Home |
 |---|---|
 | A pure function's output (titles, labels, formatting, normalization) | unit test next to the source |
+| A style token (font size, weight, colour) | unit test asserting the class that sets it — jsdom can't compute styles, but it can check the class |
 | A data invariant (no NULL image, no orphan row) | SQL check / build-time guard |
 | A pipeline or backend invariant | that layer's test suite |
 | Rendered structure, geometry, readability, interaction | e2e |
