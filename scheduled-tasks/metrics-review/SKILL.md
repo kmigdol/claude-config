@@ -91,7 +91,74 @@ The distinction, because it is easy to blur:
 
 Run these IN ADDITION to the ticket's own observables. Each names its own removal condition — **delete the entry when that condition is met**; this list is not meant to accumulate.
 
-*(None currently armed. The NEX-734 / NEX-668 annotation check was armed 2026-08-31 and removed 2026-09-02: the annotation is being written — 87 of 437 pending `new_product` proposals carry `variant_suggestion`, C7 `near_sibling` refused a proposal in the same run, and SWEEP 1/2/3 all read 0. Condition met, entry retired per the rule above.)*
+#### NEX-830 — head-card opener collisions: read the NULL-basis count, NOT the regenerated count
+
+*Armed 2026-09-18, after PR #772 (`ae28861`).*
+
+**Run this, via Supabase `execute_sql`:**
+
+```sql
+with pairs as (
+  select tr.product_id, tr.tag_id, coalesce(tr.rank,0) as rnk, coalesce(tr.mention_count,0) as mc,
+         bool_or(coalesce(tr.rank,0) <> 0) over (partition by tr.tag_id) as tag_ranked
+  from tag_rankings tr
+),
+ordered as (
+  select *, row_number() over (
+    partition by tag_id
+    order by case when tag_ranked then (rnk = 0)::int else 0 end,
+             case when tag_ranked then rnk else -mc end,
+             product_id::text) as pos
+  from pairs
+),
+head as (
+  select o.tag_id, o.product_id, t.name as tag, p.name as product,
+         pts.synthesis_basis is null as null_basis,
+         (regexp_split_to_array(trim(regexp_replace(regexp_replace(
+            lower(pts.summary), '[^a-z0-9 ]', ' ', 'g'), '\s+', ' ', 'g')), ' '))[1] as w1,
+         array_to_string((regexp_split_to_array(trim(regexp_replace(regexp_replace(
+            lower(pts.summary), '[^a-z0-9 ]', ' ', 'g'), '\s+', ' ', 'g')), ' '))[1:2], ' ') as okey
+  from ordered o
+  join tags t on t.id = o.tag_id
+  join products p on p.id = o.product_id
+  join product_tag_summaries pts on pts.product_id = o.product_id and pts.tag_id = o.tag_id
+  where o.pos <= 12
+),
+m as (select *, count(*) over (partition by tag_id, okey) as ck,
+                count(*) over (partition by tag_id, w1)   as cw from head)
+select count(*) as head_cards,
+       count(*) filter (where null_basis) as null_basis_cards,
+       count(*) filter (where ck > 1 or cw > 1) as cards_in_a_collision,
+       count(*) filter (where null_basis and not (ck > 1 or cw > 1)) as spurious_nulls
+from m;
+```
+
+Also list the offenders (`tag`, `product`, `okey`) `where null_basis`, so day-over-day comparison is possible.
+
+Verified to run as written against production on 2026-09-18, BEFORE the fixed code had had a run: `head_cards 692 | null_basis_cards 13 | cards_in_a_collision 13 | spurious_nulls 6`. That is the pre-fix state and the instrument's proof it can report a failure — if a later run returns zeros across the board, suspect the query before believing it.
+
+**How to read it:**
+
+* `null_basis_cards` is the number. Baseline **13** on the 2026-09-18 run; expected **≤ 7** now, and `spurious_nulls` expected **0** — that was the defect #772 fixed (6 of 13 cards were withholding their basis over an opener the same walk had already replaced, so they re-rolled daily against a collision that no longer existed).
+* `spurious_nulls > 0` means #772 is not working. Report it as a regression.
+* **A product that is `null_basis` on two consecutive runs is the finding to escalate** — it means that card cannot de-collide against its frozen neighbour, i.e. the open "pinned neighbour" question on the ticket. Name the products; do not average them away.
+
+🚨 **Do NOT read the stage's regenerated count as an AC4 miss without checking what shipped.** `compute_concern_basis` fingerprints `SYSTEM_PROMPT` and the rendered prompt, so **any** change to `SYSTEM_PROMPT` / `build_concern_prompt` / `MODEL` / `CONCERN_BASIS_VERSION`, or a catalog-wide ingredient/INCI rewrite, correctly invalidates every stored basis and produces a **full pass by design**. That is the gate working, not failing. Two such days already exist (09-16, ingredient membership moved to the INCI rule; 09-18, `SYSTEM_PROMPT` gained rule 11), and #770 moved ingredient tags again on 09-18. Check `git log --since=<previous run> -- pipeline/src/nextbest/concern_synthesize.py` and for INCI/ingredient-chip merges before calling a high count a regression; on such a day report AC4 as **not readable**, not as missed.
+
+The stage log line settles it and is readable for past runs — Prefect `logs/filter`, retention back to 2026-06-16 (Railway's does NOT go back far enough). Filter by `logs.timestamp`, page 200 at a time on `offset`; no flow-run id needed:
+
+```bash
+AUTH=$(railway variables --service prefect-worker --kv | grep '^PREFECT_API_AUTH_STRING=' | cut -d= -f2-)
+curl -s -u "$AUTH" -X POST https://prefect-server-production-013d.up.railway.app/api/logs/filter \
+  -H 'Content-Type: application/json' -d '{"logs":{"timestamp":{"after_":"<ISO>","before_":"<ISO>"}},
+  "limit":200,"offset":0,"sort":"TIMESTAMP_ASC"}'
+```
+
+Grep for `pairs considered`. Stage INFO lines only reach Prefect from 2026-09-16 13:37 UTC (NEX-815 #752); earlier runs have none.
+
+**Remove this entry when:** two consecutive steady-state runs read `spurious_nulls = 0` AND no single product appears in `null_basis` on both of them — or Kayleigh restates AC3 and folds this count into the ticket's own Post-Merge Verification, whichever comes first.
+
+*(Previously armed and retired: the NEX-734 / NEX-668 annotation check, armed 2026-08-31 and removed 2026-09-02 — the annotation is being written: 87 of 437 pending `new_product` proposals carried `variant_suggestion`, C7 `near_sibling` refused a proposal in the same run, and SWEEP 1/2/3 all read 0. Condition met, entry retired per the rule above.)*
 
 3. **Read the metric from wherever it actually lives.** Most Monitoring tickets here are pipeline/infra work, and their observables are **not** PostHog events. Pick the source from the ticket:
    - **PostHog** — traffic, funnel and CTR metrics. Use the PostHog MCP tools (`mcp__a1b28c81-1281-4eee-a940-e5db946cc335__*`; find them with ToolSearch, query "posthog query insight").
