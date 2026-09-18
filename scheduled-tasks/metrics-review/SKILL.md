@@ -91,6 +91,43 @@ The distinction, because it is easy to blur:
 
 Run these IN ADDITION to the ticket's own observables. Each names its own removal condition — **delete the entry when that condition is met**; this list is not meant to accumulate.
 
+#### NEX-811 — the three readability properties: assert `distinct_names > 1`, not merely "events arrived"
+
+*Armed 2026-09-18, after PR #775 (`77409e6`, merged 19:24 UTC). The ticket's own Post-Merge Verification lists six items and its removal condition says "all six" — this is a SEVENTH, added after that section was written, so a run that stops at six will miss it.*
+
+The ticket's six items check that sessions *group* correctly, and they all passed on 2026-09-18 while the UI was still unusable. `77409e6` fixed the readability half. What it shipped is three properties per scoped call:
+
+| property | example | who reads it |
+| -- | -- | -- |
+| `$ai_span_name` | `concern_synthesize · Texture/Pores` | the trace tree — the ONLY thing it renders |
+| `nb_step` | `Texture/Pores` | HogQL + property filters; groups across stages |
+| `nb_case_label` | `Vanicream Moisturizing Cream` | the Traces page, via `contains` |
+
+```sql
+SELECT toString(properties.stage) AS stage,
+       count() AS calls,
+       uniq(properties.$ai_span_name) AS distinct_names,
+       countIf(isNotNull(properties.nb_step)) AS with_step,
+       countIf(isNotNull(properties.nb_case_label)) AS with_label
+FROM events
+WHERE event = '$ai_generation'
+  AND timestamp >= toStartOfDay(now()) + toIntervalHour(10)
+GROUP BY stage ORDER BY calls DESC
+```
+
+**How to read it:**
+
+* `distinct_names` was **1 for every stage in the project** before this shipped — that is the defect, and it is the number that proves the fix. Expect **> 1** for `concern_synthesize`, `caution_synthesize`, `intersection_synthesize`, `sibling_alias_judge` and `annotate_tags`. Those five are 94.3% of the calls that sat in multi-call traces (1,532 of 1,624 on 2026-09-18).
+* `distinct_names = 1` on `concern_synthesize` with a healthy `calls` means the label is not reaching the wrapper — a regression, not drift. Report it as such.
+* `with_label = 0` on a scoped stage that ran means its `case_label` is arriving empty. `synthesize`, `asin_identity`, `amazon_url_search`, `image_search`, `product_page_search` and `merge_judge` are **deliberately** unlabelled for `nb_step` (5.7%, no trace over four nodes) — do NOT report those as misses. They DO carry `nb_case_label`.
+* 🚨 **`properties.$ai_input` is NOT queryable and never was** — PostHog keeps the AI bodies outside the event's `properties` JSON, so `countIf(empty(toString(properties.$ai_input)))` returns **0 whether or not bodies exist**. It is a vacuous green; it was quoted as evidence once already. Confirm bodies by opening a trace, or via `nb_body_withheld`, which IS in `properties`.
+
+**Also confirm the cost breakdown did not move:** insights `fW9ZUee5`, `kT69wKBY`, `Y0Xz4yuy` all group by `properties.stage`, which this change does not touch. A stage jumping ~5x means a query was rewritten to assume a single sample weight.
+
+**Timing.** The first pipeline run carrying `77409e6` is 2026-09-19 10:00 UTC (a Saturday); this review runs Mon–Fri, so the first reading falls on **Monday 2026-09-21** (task `nextRunAt` 16:00 UTC) and reads *that* day's 10:00 UTC run. Both carry the change — no need to reach back to Saturday. The query's `toStartOfDay(now()) + toIntervalHour(10)` window is already closed by 16:00 UTC, since the run finishes around 12:00.
+
+**Remove this entry when:** one run reads `distinct_names > 1` on all five named stages AND `with_label > 0` on every scoped stage that ran — at which point say so on the ticket, since that plus a screenshot of a named `concern_synthesize` tree discharges NEX-811's **AC 5**, its last outstanding one.
+
 #### NEX-830 — head-card opener collisions: read the NULL-basis count, NOT the regenerated count
 
 *Armed 2026-09-18, after PR #772 (`ae28861`).*
