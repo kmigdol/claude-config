@@ -1,12 +1,9 @@
 ---
 name: catalog-review
-description: Daily research of pending alias_flag and new_product taxonomy proposals with parallel web agents; writes verdicts into each proposal's dossier and replies with a digest (no Linear comment). Report-only unattended — applies nothing; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
+description: Daily research of pending alias_flag, new_product, duplicate_product, new_tag and new_brand taxonomy proposals with parallel web agents; writes verdicts into each proposal's dossier and replies with a digest (no Linear comment). Report-only unattended — applies nothing; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
 ---
 
-Daily catalog audit for the nextbest taxonomy proposal queue. It researches pending
-`alias_flag` and `new_product` proposals with parallel web-research agents, writes the verdicts
-into each proposal's own dossier fields, and reports a digest. **Report only — you must never
-change a proposal's status.**
+Daily catalog audit for the nextbest taxonomy proposal queue. It researches pending proposals with parallel web-research agents, writes the verdicts into each proposal's own dossier fields, and reports a digest. **Report only — you must never change a proposal's status.**
 
 Follow `.claude/skills/catalog-audit/SKILL.md` in the repo at `/Users/kayleigh/dev/nextbest` —
 the **MAIN checkout**, not a worktree. That file is the authority on the helper's flags, the
@@ -30,10 +27,11 @@ a status change.
 
 ## 🚨 Finish the digest before acting on anything
 
-Research both lanes, write the research back, and reply with the digest **before** starting work on any
-individual finding. The digest is a single deliverable; a half-finished digest plus an hour on one
-interesting card leaves the rest of the run with no record. This holds when Kayleigh redirects
-mid-run: say you are finishing the digest first (it takes a minute), then pick up her request.
+Research every lane you pulled, write the research back, and reply with the digest **before**
+starting work on any individual finding. The digest is a single deliverable; a half-finished digest
+plus an hour on one interesting card leaves the rest of the run with no record. This holds when
+Kayleigh redirects mid-run: say you are finishing the digest first (it takes a minute), then pick up
+her request.
 
 ## Preconditions
 
@@ -46,6 +44,32 @@ mid-run: say you are finishing the digest first (it takes a minute), then pick u
 3. `--base-url https://www.nextbest.one` belongs to `apply` only, which this routine never runs
    unattended. No `--base-url` appears in any unattended command.
 4. All commands run from `frontend/` of the main checkout (`cd /Users/kayleigh/dev/nextbest/frontend`).
+5. `grep` is aliased to ugrep on this machine — use `/usr/bin/grep -a` or `rg`. Never wrap a helper
+   command in `timeout` (macOS has none) and never pipe one through `tail` without capturing its
+   exit code first (redirect to a file, then `echo "EXIT=$?"`); a masked exit code has produced a
+   false "it worked" before.
+
+## The five lanes
+
+`alias_flag`, `new_product`, `duplicate_product`, `new_tag`, `new_brand`. **SKILL.md's lane-coverage
+table under "Score before trust" is the authority on which the routine may pull** — as of
+2026-09-18 every lane says yes, both new_tag and new_brand having been scored against Kayleigh's own
+resolutions that day. If a row there ever says otherwise, honour it and say so in the digest.
+
+Pull order and caps, oldest first:
+
+| order | lane | cap | note |
+|---|---|---|---|
+| 1 | `alias_flag` | 40 | |
+| 2 | `new_product` | 40 | |
+| 3 | `duplicate_product` | 40 | usually empty; a pair is two products we already carry |
+| 4 | `new_tag` | 40 | small lane |
+| 5 | `new_brand` | **20** | SECOND WAVE — see below; brand cards are the heaviest |
+
+**`new_brand` is pulled only AFTER `new_product`'s `write-research` has run.** A pending product
+joins a brand's bundle only once its own dossier says `approve` with `researched_at`, so today's
+product research is what makes a brand approvable. Pull it as a second wave, after step 5 for the
+other lanes, then research and write it the same way.
 
 ## Steps
 
@@ -57,172 +81,109 @@ mid-run: say you are finishing the digest first (it takes a minute), then pick u
 
    Keep the JSON line. It goes in the digest and is the baseline for any after-snapshot.
 
-2. **Pull both lanes**, capped at 40 cards each, oldest first. Write the queue files into
+2. **Pull the first four lanes**, capped as above. Write the queue files into
    `/private/tmp/catalog-audit-<YYYY-MM-DD>/` (create it) and **state the paths you used** in the
-   digest so a later walkthrough can find them.
+   digest so a later walkthrough can find them. `--out` is REQUIRED on every `list`.
 
    ```
-   cd /Users/kayleigh/dev/nextbest/frontend && npx -y tsx scripts/proposal-queue.ts list --lane alias_flag --status pending --limit 40 --out /private/tmp/catalog-audit-<date>/queue-alias_flag.json --env .env.prod
-   cd /Users/kayleigh/dev/nextbest/frontend && npx -y tsx scripts/proposal-queue.ts list --lane new_product --status pending --limit 40 --out /private/tmp/catalog-audit-<date>/queue-new_product.json --env .env.prod
+   cd /Users/kayleigh/dev/nextbest/frontend && npx -y tsx scripts/proposal-queue.ts list --lane <lane> --status pending --limit <cap> --out /private/tmp/catalog-audit-<date>/queue-<lane>.json --env .env.prod
    ```
 
-   `list` excludes rows this skill already stamped, so each run walks forward through the backlog.
-   **If both files come back with `count: 0`, post a one-line digest ("nothing unresearched in
-   either lane") and stop.**
+   Record what each `list` prints — the precheck line, the SKU blocker breakdown, the category
+   vocabulary line, and (default pulls only) `re-researchable (brand-struck no_attach)`. `list`
+   excludes rows this skill already stamped, so each run walks forward through the backlog.
+   **If every lane comes back with `count: 0`, post a one-line digest and stop.**
 
 3. **Batch and dispatch.** Split each lane's `cards` into batches of ~20, each its own JSON file
-   (`batch-alias_flag-01.json` …) with the same shape as the queue file. Then one `Agent` call per
-   batch, **all in a single message** so they run concurrently: `subagent_type:
-   "general-purpose"`, `model: "opus"` (fall back to `"sonnet"` if an Opus rate limit is
-   reported), `run_in_background: true`. Give each agent its batch file path, a distinct output
-   path (`findings-alias_flag-01.json` …), and the matching lane prompt from SKILL.md
-   **verbatim**. Wait for every agent to finish before continuing.
+   (a `new_tag` batch keeps the file's `categories_by_vertical`). Then one `Agent` call per batch,
+   **all in a single message** so they run concurrently: `subagent_type: "general-purpose"`,
+   `model: "opus"` (fall back to `"sonnet"` if an Opus rate limit is reported),
+   `run_in_background: true`. Give each agent its batch file path, a distinct output path, and the
+   matching lane prompt from SKILL.md **verbatim**. Wait for every agent to finish.
 
-   After the verbatim prompt, append this operator note to every agent: *"INCIDecoder renamed
-   itself: incidecoder.com 301-redirects to inkeedecoder.com (same slugs, same content). This is
-   expected, not a suspicious domain — fetch `https://inkeedecoder.com/products/<slug>` directly
-   and cite inkeedecoder.com pages normally."* Also tell each agent to write its findings file
-   after every 3–4 cards and to use a helper-script filename containing its batch number (on
-   2026-09-16 two agents stalled 600s with nothing saved, and two shared one script name and
-   overwrote each other's output). **Do not strip inkeedecoder.com citations** during
-   consolidation — they are valid.
+   `new_brand` agents also need a brands file — write it first with a read-only query against
+   production and put the path in the prompt (the SKILL.md step names the query).
 
-4. **Consolidate and validate.** Merge each lane's batch outputs into one
-   `findings-<lane>.json`: `{ "lane": "<lane>", "findings": [ … ] }`. Check exactly one finding
-   per `card_id`, no extras or duplicates. **Every finding whose `recommendation` is not
-   `undecided` must carry at least one citation URL** — downgrade any that does not to
-   `undecided` with `undecided_reason: "no citable source"` rather than shipping it, because
-   `write-research` aborts the entire run on the first uncited non-undecided finding. Confirm
-   `reassign`/`merge` findings carry `target_product_id` and `promote` findings carry
-   `new_product_name`.
+   Tell each agent to write its findings file after every 3–4 cards and to use a helper-script
+   filename containing its batch number (on 2026-09-16 two agents stalled with nothing saved, and
+   two shared one script name and overwrote each other's output).
 
-5. **Write the research back**, per lane:
+4. **Consolidate, validate, and run the within-lane duplicate pass.** Merge each lane's batch
+   outputs into one `findings-<lane>.json`. Check exactly one finding per `card_id`, no extras or
+   duplicates. **Every finding whose `recommendation` is not `undecided` must carry at least one
+   citation URL** — downgrade any that does not to `undecided` with `undecided_reason: "no citable
+   source"`, because `write-research` aborts the entire run on the first uncited one. Then run the
+   within-lane duplicate pass exactly as SKILL.md Step 2 describes, and report its count in the form
+   that section requires — a single-batch lane says so rather than reporting a bare 0.
 
-   ```
-   cd /Users/kayleigh/dev/nextbest/frontend && npx -y tsx scripts/proposal-queue.ts write-research --queue /private/tmp/catalog-audit-<date>/queue-<lane>.json --file /private/tmp/catalog-audit-<date>/findings-<lane>.json --env .env.prod
-   ```
+5. **Write the research back**, per lane. Record the `written N / skipped M (not pending) /
+   needs_enrichment K` line from each — all three numbers go in the digest.
 
-   Record the `written N / skipped M (not pending) / needs_enrichment K` line from each run — all
-   three numbers go in the digest.
+6. **Second wave: `new_brand`.** Now pull it (cap 20), research it, validate it and write it back,
+   exactly as steps 2–5.
 
-6. **Read back what is now decidable**, per lane, for the digest's class counts:
+7. **Read back what is now decidable**, per lane, with `--researched-only`, and group by
+   `agent.decision_class` for the digest's class counts. This includes rows earlier runs researched
+   and nobody has actioned yet — that backlog is exactly what the digest is for.
 
-   ```
-   cd /Users/kayleigh/dev/nextbest/frontend && npx -y tsx scripts/proposal-queue.ts list --lane <lane> --researched-only --out /private/tmp/catalog-audit-<date>/researched-<lane>.json --env .env.prod
-   ```
+8. **Reply with the digest.** No Linear comment.
 
-   Group those cards by `agent.decision_class`. This includes rows earlier runs researched and
-   nobody has actioned yet — that backlog is exactly what the digest is for.
+## What the digest must carry, beyond the class counts
 
-7. **Reply with the digest.** No Linear comment.
+SKILL.md Step 3 has the template. The parts that are easy to get wrong:
+
+- **`new_brand`: say what an approve would CREATE** — per approvable brand, its aliases, then each
+  sendable SKU as `name · category · attach N · aliases` with struck spellings marked. A bare count
+  is unreadable as a result.
+- **Never report a single `blocked N` for SKUs.** `attach_zero` (nobody mentions the product) and
+  `no_attach` (our own research struck every alias — self-inflicted, and re-researchable once) are
+  opposite failures; report them separately, and the two `undecided:no_approvable_sku` lines keyed
+  on them.
+- **`new_tag`: show the name that would be created** when house casing moves it
+  (`precheck.created_name`), with the proposed spelling beside it.
+- **`undecided` is a finding, not a failure**, and `needs_enrichment` is not an error.
+- **No single accuracy number, ever.** Counts per decision class; the classes speak for themselves.
+- **Report raw numerator and denominator**, never a bare rate.
+- **`precheck-blocked` is a queue-health signal** — break it down by failing gate, since which gate
+  dominates says what would unblock the most rows.
 
 ## When Kayleigh is present
 
-Only if she replies in this session. Then run SKILL.md's **Present mode** walkthrough:
+Only if she replies in this session. Then run SKILL.md's **Present mode** walkthrough: one lane per
+walkthrough, several decision classes per message, each headed by its three plain-language sentences
+from SKILL.md's tables, each closed by its own yes/no line, with one combined "N decisions" prompt at
+the bottom. Then wait.
 
-- **One lane per walkthrough**, `alias_flag` first while `new_product` is still being proven.
-- Work through the `decision_class` groups from `researched-<lane>.json`, **several classes per
-  message** (all of them at once is fine while each holds ~10 rows or fewer; a class with more than
-  ~10 gets its own message), each headed by its three plain-language sentences from SKILL.md's
-  tables and closed by its own yes/no line, with one combined "N decisions" prompt at the bottom.
-  Then wait for her answer.
-- On her explicit approval of a **named** class, build `decisions.json` for that class from the
-  cards' `agent` blocks, run `apply --dry-run` and show the printed request list, then run
-  `apply --group <class>` (with `--base-url https://www.nextbest.one --env .env.prod`), then
-  report the ledger summary (`ok / noop / skipped / failed`, every skipped/failed row with its
-  reason, and the caveat "a failed row may still have been consumed — check the row before
-  retrying"). Then the next approved class.
-- **A `delete` class goes through the approve route** (`delete_product_alias`), so approving it is
-  an approve, not a reject. If Claude Code's auto mode blocks that production delete call, **ask
-  Kayleigh to allow it or print the command for her to run** — never work around it.
-- **`new_product` rows show the image, the Amazon link and the Stylevana link** (or its
-  `stylevana_suppressed_reason` and score), and say which rows would launch with no buy link. If
-  Kayleigh supplies an ASIN, follow SKILL.md's three-step procedure — verify the listing title
-  first, then the `status = 'pending'`-guarded dossier update, then `apply --dry-run`.
-- A class she did not name is untouched: not held, not rejected, still pending for
-  `/admin/taxonomy`.
-- At the end, take a `counts` after-snapshot and report it in the reply alongside the before (no Linear comment), with
-  the promote narration (a `promote` creates a NEW pending `new_product` row, so `new_product`
-  pending *rises* — say the number or the delta reads as a regression).
+Before building any `decisions.json`, **run the read-back duplicate pass over
+`researched-<lane>.json`** that SKILL.md Step 4 requires — the whole stamped backlog, not just
+today's findings. Two approvals of the same thing from different days is exactly what it catches.
+
+On her explicit approval of a **named** class: build `decisions.json` for that class from the cards'
+`agent` blocks, run `apply --dry-run` and show the printed request list, then `apply --group <class>`
+with `--base-url https://www.nextbest.one --env .env.prod`, then report the ledger summary
+(`ok / noop / skipped / failed`, every skipped and failed row with its reason, and the caveat "a
+failed row may still have been consumed — check the row before retrying"). Then the next class.
+
+- **A `delete` class goes through the APPROVE route** (`delete_product_alias`), so approving it is an
+  approve, not a reject. If auto mode blocks that production call, ask Kayleigh to allow it or print
+  the command — never work around it.
+- **An `ORPHAN BRAND` line is reported to her verbatim and never auto-fixed.**
+- **A `duplicate_product` merge sends no request** — print the `merge-products` dry-run and apply
+  commands and record the row as `manual`.
+- A class she did not name is untouched: not held, not rejected, still pending for `/admin/taxonomy`.
+- At the end, take a `counts` after-snapshot and report it beside the before, with the promote
+  narration (a `promote` creates a NEW pending `new_product` row, so that count *rises*).
 
 ## Failure handling
 
-- **Any helper command exiting non-zero: stop.** Do not run the next command, do not apply
-  anything. Put the command and its error in the digest and reply with it — a run that stopped early
-  with a stated reason is a finding; a silent partial run is not.
-- **An agent batch that fails or returns unusable JSON:** consolidate the batches that succeeded,
-  run `write-research` on those, and list the failed batch's `card_id`s in the digest under
+- **Any helper command exiting non-zero: stop.** Do not run the next command, do not apply anything.
+  Put the command and its error in the digest and reply — a run that stopped early with a stated
+  reason is a finding; a silent partial run is not.
+- **An agent batch that fails or returns unusable JSON:** consolidate the batches that succeeded, run
+  `write-research` on those, and list the failed batch's `card_id`s in the digest under
   `unresearched` with the reason. Never invent findings for them.
-- **A `write-research` abort on validation:** fix the findings file (downgrade the uncited
-  findings to `undecided`) and re-run it. Do not pass a hand-edited recommendation.
-
-## Judgement rules
-
-- **Lead with what needs a decision.** The digest's job is to say which classes are ready for a
-  human, not to narrate the run.
-- **No single accuracy number, ever.** Never summarise the agents' work as a percentage. Report
-  counts per decision class and let the classes speak.
-- **`undecided` is a finding, not a failure.** It routes a row to a human with a reason. A run
-  with many undecideds and citations everywhere beats one with confident uncited answers.
-- **Never describe a class as "clean" if any of its rows lacks a citation.** Say how many rows in
-  the class carry a citation URL, out of how many.
-- **`needs_enrichment` is not an error.** It means the pipeline has not finished its mechanical
-  work on that row, so we deliberately left it alone. Report the count; do not chase it.
-- **`precheck-blocked` is a queue-health signal.** Break it down by failing gate (brand /
-  category / image / attach) — which gate dominates says what would unblock the most rows.
-- **Report the raw numerator and denominator**, never a bare rate — "12 of 40 alias_flag cards".
-- **Do not spin up investigations.** If a finding turns into work — a detector looks wrong, a
-  brand is mis-modelled, the queue has a structural problem — say so in one line and, if it
-  matters, `spawn_task` it. This routine researches rows; it never fixes the code emitting them.
-
-## Output
-
-### Step 1 — the digest (always)
-
-Reply with this text (no Linear comment):
-
-```
-**catalog-audit — <date>** · run <duration> · pending before: alias_flag <N>, new_product <N>
-
-**alias_flag** — <N> researched (<N> left unresearched) · these are PRODUCT aliases, not tags
-| what the research recommends | n | class |
-|---|---|---|
-| Keep the alias — it is the product's former name | 12 | `keep:rename` |
-| Remove the alias — it names more than one product | 4 | `delete:ambiguous_shorthand` |
-undecided 6 · needs_enrichment 0 · precheck-blocked 0
-
-**new_product** — <N> researched (<N> left unresearched)
-| Do not add it — the same product we already carry | 9 | `merge:same_sku` |
-undecided 11 · needs_enrichment 6 · precheck-blocked 8 (brand 3 / category 1 / image 2 / attach 2)
-
-Queue files: /private/tmp/catalog-audit-<date>/
-Nothing was applied. Say `walk alias_flag` to go through them.
-```
-
-**Never head a class with its code label.** The first cell is that class's **Recommended** sentence
-from SKILL.md's plain-language tables, shortened to a line; the code label rides in the last column.
-`alias_flag` rows are PRODUCT aliases — Reddit spellings attached to a product — not tag aliases;
-say so. Then the `undecided`, `needs_enrichment` and `precheck-blocked` tallies (the last by failing
-gate), the run duration and the `counts` before-snapshot. **The digest is the whole deliverable for
-an unattended run. Stop there.**
-
-### Step 2 — the walkthrough (only when Kayleigh is present)
-
-Several classes per message, each in this shape, one combined prompt at the bottom:
-
-> ## <lane> — <K> classes, <N> decisions
->
-> ### <plain-language heading> (`<decision_class>`) — <count> rows
-> **Proposed:** <sentence>   **Recommended:** <sentence>   **Approving:** <sentence>
-> - *<alias or product name>* → <what the agent found> · <citation URL>
-> - … `show <decision_class>` for every row. → **<its own yes/no question>**
->
-> ### <next class, same shape> …
->
-> **<N> decisions above. Reply `yes to all`, or name the classes you want.**
-
-Rules: the three sentences come **verbatim from SKILL.md's plain-language tables** — a code label is
-never a heading, only a parenthetical. Split a class into its own message only when it has more than
-~10 rows. **Give a recommendation, not a menu**; say plainly when the call is genuinely hers, and
-order classes by how much they unblock, not alphabetically. Present the `undecided` classes too, so
-she can see what the agents could not settle — they generate no request and take no approval.
+- **A `write-research` abort on validation:** fix the findings file (downgrade the uncited findings
+  to `undecided`) and re-run it. Do not pass a hand-edited recommendation.
+- **Do not spin up investigations.** If a finding turns into work — a detector looks wrong, a brand
+  is mis-modelled, the queue has a structural problem — say so in one line and, if it matters,
+  `spawn_task` it. This routine researches rows; it never fixes the code emitting them.
