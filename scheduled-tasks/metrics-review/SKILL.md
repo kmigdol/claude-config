@@ -115,6 +115,8 @@ WHERE event = '$ai_generation'
 GROUP BY stage ORDER BY calls DESC
 ```
 
+Verified to run as written against production on 2026-09-18, BEFORE the fixed code had had a run — it executes cleanly even though none of the three properties exists on any event yet, and returns the pre-fix state: `concern_synthesize 1439 calls | distinct_names 1 | with_step 0 | with_label 0`, and `distinct_names 1` on all sixteen stages. That is the instrument's proof it can report a failure; if a later run returns those same zeros, the deploy did not take — do not read it as "no data".
+
 **How to read it:**
 
 * `distinct_names` was **1 for every stage in the project** before this shipped — that is the defect, and it is the number that proves the fix. Expect **> 1** for `concern_synthesize`, `caution_synthesize`, `intersection_synthesize`, `sibling_alias_judge` and `annotate_tags`. Those five are 94.3% of the calls that sat in multi-call traces (1,532 of 1,624 on 2026-09-18).
