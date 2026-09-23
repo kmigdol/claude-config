@@ -1,6 +1,6 @@
 ---
 name: catalog-review
-description: Daily research of pending alias_flag, new_product, duplicate_product, new_tag and new_brand taxonomy proposals with parallel web agents, plus INCI agents for new products and the INCI gap queue (NEX-840); writes verdicts and INCI lists into each proposal's dossier and replies with a digest (no Linear comment). Report-only unattended — applies nothing and loads no gap lists; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
+description: Weekday research of pending alias_flag, new_product, duplicate_product, new_tag and new_brand taxonomy proposals with parallel web agents, plus INCI agents for new products and the INCI gap queue (NEX-840); writes verdicts and INCI lists into each proposal's dossier, loads spot-checked gap lists, and replies with a digest (no Linear comment). Never changes a proposal's status unattended; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
 ---
 
 Daily catalog audit for the nextbest taxonomy proposal queue. It researches pending proposals with parallel web-research agents, writes the verdicts into each proposal's own dossier fields, and reports a digest. **Report only — you must never change a proposal's status.**
@@ -21,10 +21,12 @@ routine — this line overrides them.
 promote or reassign anything.** `apply` is the only command that resolves a proposal, and it runs
 only in the walkthrough, only on Kayleigh's explicit "approve `<class>`" for a class she named.
 
-`counts`, `list`, `inci-input` and `write-research` are the whole unattended surface of the helper,
-plus one read-only pipeline command, `nextbest inci-gap` (NEX-840). `write-research` writes
-research into `dossier_json` on rows that stay `pending` — that is the deliverable, and it is not
-a status change. **`nextbest load-inci` is a production write and is never run unattended.**
+`counts`, `list`, `inci-input` and `write-research` are the whole unattended surface of the helper.
+`write-research` writes research into `dossier_json` on rows that stay `pending` — that is the
+deliverable, and it is not a status change. The pipeline side (NEX-840) is `nextbest inci-gap`
+(read-only), `nextbest inci-spot-check` (no database) and **`nextbest load-inci`, the one
+production write this routine makes unattended** (Kayleigh, 2026-09-23) — only on the checked gap
+files, only through step 5b's gates.
 
 ## 🚨 Finish the digest before acting on anything
 
@@ -138,10 +140,24 @@ other lanes, then research and write it the same way.
    For `new_product`, add `--inci` with the queue's INCI agent outputs, comma-separated
    (`--inci /private/tmp/catalog-audit-<date>/inci/inci_output_01.json,…`). Record its
    `inci: attached N` line. The lists ride on the proposals and are written when Kayleigh approves.
-   The **gap-queue** outputs are NOT loaded: leave them staged under `inci-gap/` and report them.
+
+5b. **Load the gap-queue lists (NEX-840)**, following SKILL.md Step 1's three gates exactly and
+   stopping on the first non-zero exit:
+
+   ```
+   cd /Users/kayleigh/dev/nextbest && pipeline/.venv/bin/python -m nextbest inci-spot-check /private/tmp/catalog-audit-<date>/inci-gap/*_output.json --out /private/tmp/catalog-audit-<date>/inci-gap/checked
+   cd /Users/kayleigh/dev/nextbest && railway run --service nextbest -- pipeline/.venv/bin/python -m nextbest load-inci /private/tmp/catalog-audit-<date>/inci-gap/checked/*_checked.json
+   cd /Users/kayleigh/dev/nextbest && railway run --service nextbest -- pipeline/.venv/bin/python -m nextbest load-inci /private/tmp/catalog-audit-<date>/inci-gap/checked/*_checked.json --apply --coverage
+   ```
+
+   - Run the dry run and read its plan BEFORE the apply. **If the chip-row `delete` count is not 0,
+     do not apply** — report the plan in the digest. (`protected (other source)` above 0 is normal.)
+   - Load only files `inci-spot-check` wrote (`*_checked.json`) — never an agent's raw output.
+   - If the spot check keeps no rows, there is nothing to load; say so.
+   - Record the spot check's summary line and the apply's `--coverage` output.
 
 6. **Second wave: `new_brand`.** Now pull it (cap 20), research it, validate it and write it back,
-   exactly as steps 2–5.
+   exactly as steps 2–5 (5b is not repeated: the gap queue is loaded once per run).
 
 7. **Read back what is now decidable**, per lane, with `--researched-only`, and group by
    `agent.decision_class` for the digest's class counts. This includes rows earlier runs researched
@@ -166,9 +182,10 @@ SKILL.md Step 3 has the template. The parts that are easy to get wrong:
 - **No single accuracy number, ever.** Counts per decision class; the classes speak for themselves.
 - **Report raw numerator and denominator**, never a bare rate.
 - **INCI (NEX-840):** `inci: attached N` on the new_product write-back; how many INCI rows came back
-  null, with the agents' reasons; `inci-gap`'s coverage and `overdue` lines; and the staged gap
-  lists as `<path> — N lists (M null), waiting for a load`. Overdue > 0 is the headline, not a
-  footnote.
+  null, with the agents' reasons; `inci-gap`'s coverage and `overdue` lines before the load; the
+  spot check's `pass / fail / unreachable / unresolved` line with every dropped row and why; the
+  load's written counts and the `--coverage` output after it. Overdue > 0 after the load is the
+  headline, not a footnote.
 - **`precheck-blocked` is a queue-health signal** — break it down by failing gate, since which gate
   dominates says what would unblock the most rows.
 
@@ -198,9 +215,8 @@ failed row may still have been consumed — check the row before retrying"). The
 - A class she did not name is untouched: not held, not rejected, still pending for `/admin/taxonomy`.
 - At the end, take a `counts` after-snapshot and report it beside the before, with the promote
   narration (a `promote` creates a NEW pending `new_product` row, so that count *rises*).
-- **Staged INCI gap lists load only on her explicit yes**, following
-  `docs/runbooks/inci-research-pass.md`: spot-check 3 rows per batch against the cited page, dry
-  run `load-inci`, show the plan, then `--apply --coverage`.
+- **INCI gap lists are loaded by the unattended run itself** (step 5b). If it stopped at a gate,
+  show her the plan it stopped on and ask before re-running.
 
 ## Failure handling
 
