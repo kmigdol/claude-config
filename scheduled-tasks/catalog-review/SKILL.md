@@ -1,6 +1,6 @@
 ---
 name: catalog-review
-description: Daily research of pending alias_flag, new_product, duplicate_product, new_tag and new_brand taxonomy proposals with parallel web agents; writes verdicts into each proposal's dossier and replies with a digest (no Linear comment). Report-only unattended — applies nothing; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
+description: Daily research of pending alias_flag, new_product, duplicate_product, new_tag and new_brand taxonomy proposals with parallel web agents, plus INCI agents for new products and the INCI gap queue (NEX-840); writes verdicts and INCI lists into each proposal's dossier and replies with a digest (no Linear comment). Report-only unattended — applies nothing and loads no gap lists; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
 ---
 
 Daily catalog audit for the nextbest taxonomy proposal queue. It researches pending proposals with parallel web-research agents, writes the verdicts into each proposal's own dossier fields, and reports a digest. **Report only — you must never change a proposal's status.**
@@ -21,9 +21,10 @@ routine — this line overrides them.
 promote or reassign anything.** `apply` is the only command that resolves a proposal, and it runs
 only in the walkthrough, only on Kayleigh's explicit "approve `<class>`" for a class she named.
 
-`counts`, `list` and `write-research` are the whole unattended surface. `write-research` writes
+`counts`, `list`, `inci-input` and `write-research` are the whole unattended surface of the helper,
+plus one read-only pipeline command, `nextbest inci-gap` (NEX-840). `write-research` writes
 research into `dossier_json` on rows that stay `pending` — that is the deliverable, and it is not
-a status change.
+a status change. **`nextbest load-inci` is a production write and is never run unattended.**
 
 ## 🚨 Finish the digest before acting on anything
 
@@ -108,6 +109,21 @@ other lanes, then research and write it the same way.
    filename containing its batch number (on 2026-09-16 two agents stalled with nothing saved, and
    two shared one script name and overwrote each other's output).
 
+   **INCI agents, in the same message (NEX-840).** A product with no INCI list shows no ingredient
+   chips. Follow SKILL.md Step 1's INCI section exactly:
+
+   ```
+   cd /Users/kayleigh/dev/nextbest/frontend && npx -y tsx scripts/proposal-queue.ts inci-input --queue /private/tmp/catalog-audit-<date>/queue-new_product.json --out /private/tmp/catalog-audit-<date>/inci --batch-size 10
+   cd /Users/kayleigh/dev/nextbest && railway run --service nextbest -- pipeline/.venv/bin/python -m nextbest inci-gap --write-batches /private/tmp/catalog-audit-<date>/inci-gap --batch-size 10
+   ```
+
+   The second command is read-only against production; record the coverage and `overdue` lines it
+   prints. Then one agent per `inci_input_NN.json` and per `inci_gap_*_input.json`, each with
+   SKILL.md's **INCI agent prompt** verbatim, 10 products per agent — the batch size the blind
+   accuracy runs measured. Each writes beside its input, `_input` → `_output`
+   (`inci/inci_output_01.json`, `inci-gap/inci_gap_<stamp>_batch_01_output.json`). Do not fold INCI
+   work into the verdict agents.
+
 4. **Consolidate, validate, and run the within-lane duplicate pass.** Merge each lane's batch
    outputs into one `findings-<lane>.json`. Check exactly one finding per `card_id`, no extras or
    duplicates. **Every finding whose `recommendation` is not `undecided` must carry at least one
@@ -118,6 +134,11 @@ other lanes, then research and write it the same way.
 
 5. **Write the research back**, per lane. Record the `written N / skipped M (not pending) /
    needs_enrichment K` line from each — all three numbers go in the digest.
+
+   For `new_product`, add `--inci` with the queue's INCI agent outputs, comma-separated
+   (`--inci /private/tmp/catalog-audit-<date>/inci/inci_output_01.json,…`). Record its
+   `inci: attached N` line. The lists ride on the proposals and are written when Kayleigh approves.
+   The **gap-queue** outputs are NOT loaded: leave them staged under `inci-gap/` and report them.
 
 6. **Second wave: `new_brand`.** Now pull it (cap 20), research it, validate it and write it back,
    exactly as steps 2–5.
@@ -144,6 +165,10 @@ SKILL.md Step 3 has the template. The parts that are easy to get wrong:
 - **`undecided` is a finding, not a failure**, and `needs_enrichment` is not an error.
 - **No single accuracy number, ever.** Counts per decision class; the classes speak for themselves.
 - **Report raw numerator and denominator**, never a bare rate.
+- **INCI (NEX-840):** `inci: attached N` on the new_product write-back; how many INCI rows came back
+  null, with the agents' reasons; `inci-gap`'s coverage and `overdue` lines; and the staged gap
+  lists as `<path> — N lists (M null), waiting for a load`. Overdue > 0 is the headline, not a
+  footnote.
 - **`precheck-blocked` is a queue-health signal** — break it down by failing gate, since which gate
   dominates says what would unblock the most rows.
 
@@ -173,6 +198,9 @@ failed row may still have been consumed — check the row before retrying"). The
 - A class she did not name is untouched: not held, not rejected, still pending for `/admin/taxonomy`.
 - At the end, take a `counts` after-snapshot and report it beside the before, with the promote
   narration (a `promote` creates a NEW pending `new_product` row, so that count *rises*).
+- **Staged INCI gap lists load only on her explicit yes**, following
+  `docs/runbooks/inci-research-pass.md`: spot-check 3 rows per batch against the cited page, dry
+  run `load-inci`, show the plan, then `--apply --coverage`.
 
 ## Failure handling
 
