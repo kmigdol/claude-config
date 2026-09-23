@@ -197,6 +197,30 @@ Grep for `pairs considered`. Stage INFO lines only reach Prefect from 2026-09-16
 
 **Remove this entry when:** two consecutive steady-state runs read `spurious_nulls = 0` AND no single product appears in `null_basis` on both of them — or Kayleigh restates AC3 and folds this count into the ticket's own Post-Merge Verification, whichever comes first.
 
+#### NEX-823 — hand-check every ASIN the daily sweep nulled or left uncertain
+
+*Armed 2026-09-23. Kayleigh accepted the scheduled `creators_dp_recheck` sweep as AC4's execution **on the condition that the review hand-checks each null** — this entry IS that supervision. Skipping it silently removes the only human check on an unsupervised write.*
+
+The sweep runs inside the daily pipeline (~10:50 UTC), visits ~60 leg-0 rows, and nulls an ASIN only when two judge runs agree. Run via Supabase `execute_sql` (verified 2026-09-23, returns the 2 rows below):
+
+```sql
+select id, status, dedup_key,
+       dossier_json->'creators_dp_recheck'->>'outcome' as outcome,
+       dossier_json->'creators_dp_recheck'->>'asin' as asin,
+       dossier_json->'creators_dp_recheck'->>'observed_title' as observed_title,
+       dossier_json->'creators_dp_recheck'->>'reason' as reason,
+       dossier_json->>'asin_dp_disproved_at' as disproved_at
+from taxonomy_proposals
+where dossier_json->'creators_dp_recheck'->>'outcome' in ('dp_rejected','dp_uncertain')
+order by disproved_at desc nulls last
+```
+
+Rows already checked (do not re-report): `c8857ecc` Etude Hydro Barrier Cream → `B091PN6NPT` "SoonJung 2x Barrier Repair Cream" — **rejected, correct** (distinct SKU). `6b626773` Zyrtec → `B0F2JRBVSM` "Zyrtec 24-Hour … 5 mg, 35 ct" — **uncertain, ASIN kept** (judges split; intended name is the colloquial brand, so keeping it is reasonable).
+
+**How to read it:** for each NEW row, compare the intended product (the `dedup_key` slug) against `observed_title` and say in the NEX-823 comment whether the null was right. A null of the correct SKU is a **regression** — report it as such and recommend pausing the apply. Also quote the Prefect line `visited N, nulled N, confirmed N, uncertain N, unobserved N … canary probes N` and the remaining unverified leg-0 count (~261 on 09-23).
+
+**Remove this entry when:** the unverified leg-0 backlog reads 0 (AC4 met), or Kayleigh says the sweep no longer needs a daily hand-check.
+
 *(Previously armed and retired: the NEX-734 / NEX-668 annotation check, armed 2026-08-31 and removed 2026-09-02 — the annotation is being written: 87 of 437 pending `new_product` proposals carried `variant_suggestion`, C7 `near_sibling` refused a proposal in the same run, and SWEEP 1/2/3 all read 0. Condition met, entry retired per the rule above.)*
 
 3. **Read the metric from wherever it actually lives.** Most Monitoring tickets here are pipeline/infra work, and their observables are **not** PostHog events. Pick the source from the ticket:
