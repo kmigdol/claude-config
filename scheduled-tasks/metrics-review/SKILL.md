@@ -193,50 +193,6 @@ Read Sentry (Sentry MCP — if it needs auth, say so and give Kayleigh the manua
 
 **Remove this entry when:** NEX-805 is Done.
 
-#### NEX-870 — intersection keep floor: pages held at 2 products, and how many got deleted
-
-*Armed 2026-09-23, after PR #807 (`180a8ab`) merged and the migration was hand-applied to prod.* The first daily run using the new code is **2026-09-24 ~10:00 UTC**. This entry adds reading instructions to the ticket's own Post-Merge Verification, which you run in full as usual.
-
-**1. Snapshot history** (Supabase `execute_sql`):
-
-```sql
-select snapshot_date, intersection_pages_total, intersection_pages_at_floor,
-       intersection_pages_under_5, intersection_pages_kept_below_floor
-from taxonomy_health_snapshots order by snapshot_date desc limit 14;
-```
-
-- `kept_below_floor` is **NULL on every row before 2026-09-24**. The column didn't exist then, so NULL there is expected, not a failure. A NULL on 09-24 or later **is** a failure: either the snapshot writer is not reading the column, or the pipeline deploy predates the code.
-- Baseline before the change: `total` 97→103 over 09-10…09-23, `at_floor` 17–22.
-- `at_floor` now means `product_count <= 3` (it used to be `= 3`). The history is still comparable, because no page could sit at 2 before NEX-870.
-
-**2. Every page held below 3 must be live:**
-
-```sql
-select t.slug as concern, s.category_slug, s.product_count
-from tag_category_summaries s join tags t on t.id = s.tag_id
-where s.product_count < 3 order by 1, 2;
-```
-
-Then `curl -sL -o /dev/null -w "%{http_code}" https://www.nextbest.one/topics/<concern>/<category_slug>` for each row: every one must return **200**. Use `www.`; the apex answers 308. Zero rows is a legitimate early result, meaning no caution flip has hit a 3-product page yet. Report it as "not yet exercised", not as a pass or a fail.
-
-- A row with `product_count < 2` is a **regression** (the delete floor isn't working).
-- A row returning 302 or 404 is also a **regression**. The page exists in the registry but isn't served; check the gone-urls redirect map before blaming data.
-
-**3. How many pages the run deleted, and how many it held.** Read the Prefect stage log for the day's run (same `logs/filter` recipe as the NEX-830 entry above) and grep for two lines:
-- `intersection_synthesize: deleted N obsolete tag_category_summaries rows`. **This is the churn metric.** Before the change it was 4 deletions in 8 days (09-02 → 09-10). No line on a day means nothing was deleted.
-- `intersection_synthesize: N eligible intersections (M held below the create floor)`. M is how many pages the keep floor saved that day, and should equal the SQL row count in step 2.
-
-Also run a whole-sitemap spot check: every `/topics/*/*` `<loc>` in `https://www.nextbest.one/sitemap.xml` returns 200. On 2026-09-23 all 103 did.
-
-**How to read it:**
-- **Working:** `kept_below_floor` ≥ 1 with every held page returning 200, and daily deletions at or near 0.
-- **Keep-rule flapping:** a pair held at 2 on one day and deleted the next (fell to 1). The ticket says a few of these mean it is time to revisit the design with a grace period. Name the pair; don't average it away.
-- **Unrelated movement:** `intersection_pages_total` rising is new pairs clearing 3, not the fix. Only deletions measure the fix.
-
-**Exit:** the ticket's own AC — at least 14 daily runs from 2026-09-24, so readable around **2026-10-08** at the earliest. Elapsed time alone never closes it. Also re-check AC7's PostHog leg once: the `taxonomy_health_snapshot` event from 09-24 onward carries the `intersection_pages_kept_below_floor` property.
-
-**Remove this entry when:** NEX-870 leaves Monitoring.
-
 *(Previously armed and retired: the NEX-811 readability check, armed 2026-09-18 and removed 2026-09-23 — `distinct_names > 1` on all five named stages for three runs (09-21/22/23), and `nb_case_label` present on every stage #775 labelled. Eight stages (`asin_identity`, `cluster_partition_judge`, `tag_alias_judge`, `merge_judge`, `dossier_search`, `image_search`, `product_page_search`, `amazon_url_search`) carry no `nb_case_label` **by design** per the #775 merge comment — Kayleigh confirmed 2026-09-23; do not report them as misses. The check had wrongly expected labels on every scoped stage.)*
 
 *(Previously armed and retired: the NEX-734 / NEX-668 annotation check, armed 2026-08-31 and removed 2026-09-02 — the annotation is being written: 87 of 437 pending `new_product` proposals carried `variant_suggestion`, C7 `near_sibling` refused a proposal in the same run, and SWEEP 1/2/3 all read 0. Condition met, entry retired per the rule above.)*
