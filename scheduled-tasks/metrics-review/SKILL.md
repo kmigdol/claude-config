@@ -221,6 +221,17 @@ Rows already checked (do not re-report): `c8857ecc` Etude Hydro Barrier Cream �
 
 **Remove this entry when:** the unverified leg-0 backlog reads 0 (AC4 met), or Kayleigh says the sweep no longer needs a daily hand-check.
 
+#### NEX-805 — read Sentry for AC6; the close is pre-approved
+
+*Armed 2026-09-23.* Kayleigh accepted AC4 and approved closing NEX-805 **once Sentry reads clean**. All other ACs are ✅ (audit in the 2026-09-23 decision comment on the ticket).
+
+Read Sentry (Sentry MCP — if it needs auth, say so and give Kayleigh the manual check) for **new** issues on the `/topics/*` and `/ingredients/*` routes with first-seen between **2026-09-22 23:30 and 2026-09-23 23:30 UTC** (24h after PR 2's deploy). Pre-existing issues that merely recurred are not new.
+
+- **Clean:** in an unattended run, report "NEX-805 ready: Sentry clean, close pre-approved" in the digest — do NOT move it yourself. In a live session with Kayleigh, post the closing AC audit, tick all 7 AC boxes with evidence, keep the `Improvement` label, and move it to Done.
+- **Not clean:** report the issue ids and recommend keeping it open.
+
+**Remove this entry when:** NEX-805 is Done.
+
 *(Previously armed and retired: the NEX-734 / NEX-668 annotation check, armed 2026-08-31 and removed 2026-09-02 — the annotation is being written: 87 of 437 pending `new_product` proposals carried `variant_suggestion`, C7 `near_sibling` refused a proposal in the same run, and SWEEP 1/2/3 all read 0. Condition met, entry retired per the rule above.)*
 
 3. **Read the metric from wherever it actually lives.** Most Monitoring tickets here are pipeline/infra work, and their observables are **not** PostHog events. Pick the source from the ticket:
