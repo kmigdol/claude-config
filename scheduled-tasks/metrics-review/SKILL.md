@@ -182,16 +182,7 @@ Rows already checked (do not re-report): `c8857ecc` Etude Hydro Barrier Cream �
 
 **Remove this entry when:** the unverified leg-0 backlog reads 0 (AC4 met), or Kayleigh says the sweep no longer needs a daily hand-check.
 
-#### NEX-805 — read Sentry for AC6; the close is pre-approved
-
-*Armed 2026-09-23.* Kayleigh accepted AC4 and approved closing NEX-805 **once Sentry reads clean**. All other ACs are ✅ (audit in the 2026-09-23 decision comment on the ticket).
-
-Read Sentry (Sentry MCP — if it needs auth, say so and give Kayleigh the manual check) for **new** issues on the `/topics/*` and `/ingredients/*` routes with first-seen between **2026-09-22 23:30 and 2026-09-23 23:30 UTC** (24h after PR 2's deploy). Pre-existing issues that merely recurred are not new.
-
-- **Clean:** in an unattended run, report "NEX-805 ready: Sentry clean, close pre-approved" in the digest — do NOT move it yourself. In a live session with Kayleigh, post the closing AC audit, tick all 7 AC boxes with evidence, keep the `Improvement` label, and move it to Done.
-- **Not clean:** report the issue ids and recommend keeping it open.
-
-**Remove this entry when:** NEX-805 is Done.
+*(Previously armed and retired: the NEX-805 Sentry check, armed 2026-09-23 and removed 2026-09-24. The AC6 window read clean: 2 new issues, neither on a tag route. Kayleigh closed the ticket in the live session.)*
 
 *(Previously armed and retired: the NEX-811 readability check, armed 2026-09-18 and removed 2026-09-23 — `distinct_names > 1` on all five named stages for three runs (09-21/22/23), and `nb_case_label` present on every stage #775 labelled. Eight stages (`asin_identity`, `cluster_partition_judge`, `tag_alias_judge`, `merge_judge`, `dossier_search`, `image_search`, `product_page_search`, `amazon_url_search`) carry no `nb_case_label` **by design** per the #775 merge comment — Kayleigh confirmed 2026-09-23; do not report them as misses. The check had wrongly expected labels on every scoped stage.)*
 
