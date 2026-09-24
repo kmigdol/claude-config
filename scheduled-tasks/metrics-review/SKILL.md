@@ -124,8 +124,12 @@ head as (
   join product_tag_summaries pts on pts.product_id = o.product_id and pts.tag_id = o.tag_id
   where o.pos <= 12
 ),
+-- w1 is plural-folded exactly as `_fold_plural` does, so 'ceramide' and
+-- 'ceramides' collide here as they do in the code (fixed 2026-09-24).
+folded as (select *, case when length(w1) > 3 and w1 like '%s' and w1 !~ '(ss|us|is)$'
+                          then left(w1, -1) else w1 end as w1f from head),
 m as (select *, count(*) over (partition by tag_id, okey) as ck,
-                count(*) over (partition by tag_id, w1)   as cw from head)
+                count(*) over (partition by tag_id, w1f)  as cw from folded)
 select count(*) as head_cards,
        count(*) filter (where null_basis) as null_basis_cards,
        count(*) filter (where ck > 1 or cw > 1) as cards_in_a_collision,
@@ -135,13 +139,14 @@ from m;
 
 Also list the offenders (`tag`, `product`, `okey`) `where null_basis`, so day-over-day comparison is possible.
 
-Verified to run as written against production on 2026-09-18, BEFORE the fixed code had had a run: `head_cards 692 | null_basis_cards 13 | cards_in_a_collision 13 | spurious_nulls 6`. That is the pre-fix state and the instrument's proof it can report a failure — if a later run returns zeros across the board, suspect the query before believing it.
+Verified to run as written against production on 2026-09-18, BEFORE the fixed code had had a run: `head_cards 692 | null_basis_cards 13 | cards_in_a_collision 13 | spurious_nulls 6`. That is the pre-fix state and the instrument's proof it can report a failure — if a later run returns zeros across the board, suspect the query before believing it. Plural-folded version re-verified as written on 2026-09-24: `head_cards 704 | null_basis_cards 8 | cards_in_a_collision 14 | spurious_nulls 0` (the unfolded version read `spurious_nulls 2` on the same data — both were `ceramide`/`ceramides` pairs).
 
 **How to read it:**
 
 * `null_basis_cards` is the number. Baseline **13** on the 2026-09-18 run; expected **≤ 7** now, and `spurious_nulls` expected **0** — that was the defect #772 fixed (6 of 13 cards were withholding their basis over an opener the same walk had already replaced, so they re-rolled daily against a collision that no longer existed).
-* `spurious_nulls > 0` means #772 is not working. Report it as a regression.
-* **A product that is `null_basis` on two consecutive runs is the finding to escalate** — it means that card cannot de-collide against its frozen neighbour, i.e. the open "pinned neighbour" question on the ticket. Name the products; do not average them away.
+* `spurious_nulls > 0` means #772 is not working. Report it as a regression. ⚠️ Until 2026-09-24 this query compared the raw first word, while the code folds plurals — so `ceramide` / `ceramides` pairs read as spurious (09-24: 2 false positives, 0 with the fold). If `spurious_nulls > 0` again, first check the offender against the code's own `opener_collides` before calling it a regression.
+* **A product that is `null_basis` on two consecutive runs is the finding to escalate — EXCEPT a shared-strength collision.** AC3 was restated 2026-09-24: a collision on a list whose cards share a strength (Azelaic Acid, where 6 of 12 head products are 10% and cards keep opening on "10%") re-rolls daily and is **counted, not failed**. Report it as a count, not an escalation. Escalate only a repeat NULL whose opener is NOT a shared strength/number. Name the products either way; do not average them away.
+* #787's unfreeze had never fired in production as of 09-24 (zero `unfreezing … (NEX-830)` lines on 09-23/09-24). Do not credit a cleared card to #787 without that log line.
 
 🚨 **Do NOT read the stage's regenerated count as an AC4 miss without checking what shipped.** `compute_concern_basis` fingerprints `SYSTEM_PROMPT` and the rendered prompt, so **any** change to `SYSTEM_PROMPT` / `build_concern_prompt` / `MODEL` / `CONCERN_BASIS_VERSION`, or a catalog-wide ingredient/INCI rewrite, correctly invalidates every stored basis and produces a **full pass by design**. That is the gate working, not failing. Two such days already exist (09-16, ingredient membership moved to the INCI rule; 09-18, `SYSTEM_PROMPT` gained rule 11), and #770 moved ingredient tags again on 09-18. Check `git log --since=<previous run> -- pipeline/src/nextbest/concern_synthesize.py` and for INCI/ingredient-chip merges before calling a high count a regression; on such a day report AC4 as **not readable**, not as missed.
 
