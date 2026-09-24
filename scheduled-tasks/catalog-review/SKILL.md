@@ -63,11 +63,11 @@ Pull order and caps, oldest first:
 
 | order | lane | cap | note |
 |---|---|---|---|
-| 1 | `alias_flag` | 40 | |
-| 2 | `new_product` | 40 | |
-| 3 | `duplicate_product` | 40 | usually empty; a pair is two products we already carry |
-| 4 | `new_tag` | 40 | small lane |
-| 5 | `new_brand` | **20** | SECOND WAVE — see below; brand cards are the heaviest |
+| 1 | `alias_flag` | 100 | |
+| 2 | `new_product` | 100 | raised from 40 on 2026-09-24 (Kayleigh) — the lane with the backlog |
+| 3 | `duplicate_product` | 100 | usually empty; a pair is two products we already carry |
+| 4 | `new_tag` | 100 | small lane |
+| 5 | `new_brand` | **40** | SECOND WAVE — see below; brand cards are the heaviest (raised from 20 on 2026-09-24) |
 
 **`new_brand` is pulled only AFTER `new_product`'s `write-research` has run.** A pending product
 joins a brand's bundle only once its own dossier says `approve` with `researched_at`, so today's
@@ -156,7 +156,7 @@ other lanes, then research and write it the same way.
    - If the spot check keeps no rows, there is nothing to load; say so.
    - Record the spot check's summary line and the apply's `--coverage` output.
 
-6. **Second wave: `new_brand`.** Now pull it (cap 20), research it, validate it and write it back,
+6. **Second wave: `new_brand`.** Now pull it (cap 40), research it, validate it and write it back,
    exactly as steps 2–5 (5b is not repeated: the gap queue is loaded once per run).
 
 7. **Read back what is now decidable**, per lane, with `--researched-only`, and group by
