@@ -91,78 +91,6 @@ The distinction, because it is easy to blur:
 
 Run these IN ADDITION to the ticket's own observables. Each names its own removal condition — **delete the entry when that condition is met**; this list is not meant to accumulate.
 
-#### NEX-830 — head-card opener collisions: read the NULL-basis count, NOT the regenerated count
-
-*Armed 2026-09-18, after PR #772 (`ae28861`).*
-
-**Run this, via Supabase `execute_sql`:**
-
-```sql
-with pairs as (
-  select tr.product_id, tr.tag_id, coalesce(tr.rank,0) as rnk, coalesce(tr.mention_count,0) as mc,
-         bool_or(coalesce(tr.rank,0) <> 0) over (partition by tr.tag_id) as tag_ranked
-  from tag_rankings tr
-),
-ordered as (
-  select *, row_number() over (
-    partition by tag_id
-    order by case when tag_ranked then (rnk = 0)::int else 0 end,
-             case when tag_ranked then rnk else -mc end,
-             product_id::text) as pos
-  from pairs
-),
-head as (
-  select o.tag_id, o.product_id, t.name as tag, p.name as product,
-         pts.synthesis_basis is null as null_basis,
-         (regexp_split_to_array(trim(regexp_replace(regexp_replace(
-            lower(pts.summary), '[^a-z0-9 ]', ' ', 'g'), '\s+', ' ', 'g')), ' '))[1] as w1,
-         array_to_string((regexp_split_to_array(trim(regexp_replace(regexp_replace(
-            lower(pts.summary), '[^a-z0-9 ]', ' ', 'g'), '\s+', ' ', 'g')), ' '))[1:2], ' ') as okey
-  from ordered o
-  join tags t on t.id = o.tag_id
-  join products p on p.id = o.product_id
-  join product_tag_summaries pts on pts.product_id = o.product_id and pts.tag_id = o.tag_id
-  where o.pos <= 12
-),
--- w1 is plural-folded exactly as `_fold_plural` does, so 'ceramide' and
--- 'ceramides' collide here as they do in the code (fixed 2026-09-24).
-folded as (select *, case when length(w1) > 3 and w1 like '%s' and w1 !~ '(ss|us|is)$'
-                          then left(w1, -1) else w1 end as w1f from head),
-m as (select *, count(*) over (partition by tag_id, okey) as ck,
-                count(*) over (partition by tag_id, w1f)  as cw from folded)
-select count(*) as head_cards,
-       count(*) filter (where null_basis) as null_basis_cards,
-       count(*) filter (where ck > 1 or cw > 1) as cards_in_a_collision,
-       count(*) filter (where null_basis and not (ck > 1 or cw > 1)) as spurious_nulls
-from m;
-```
-
-Also list the offenders (`tag`, `product`, `okey`) `where null_basis`, so day-over-day comparison is possible.
-
-Verified to run as written against production on 2026-09-18, BEFORE the fixed code had had a run: `head_cards 692 | null_basis_cards 13 | cards_in_a_collision 13 | spurious_nulls 6`. That is the pre-fix state and the instrument's proof it can report a failure — if a later run returns zeros across the board, suspect the query before believing it. Plural-folded version re-verified as written on 2026-09-24: `head_cards 704 | null_basis_cards 8 | cards_in_a_collision 14 | spurious_nulls 0` (the unfolded version read `spurious_nulls 2` on the same data — both were `ceramide`/`ceramides` pairs).
-
-**How to read it:**
-
-* `null_basis_cards` is the number. Baseline **13** on the 2026-09-18 run; expected **≤ 7** now, and `spurious_nulls` expected **0** — that was the defect #772 fixed (6 of 13 cards were withholding their basis over an opener the same walk had already replaced, so they re-rolled daily against a collision that no longer existed).
-* `spurious_nulls > 0` means #772 is not working. Report it as a regression. ⚠️ Until 2026-09-24 this query compared the raw first word, while the code folds plurals — so `ceramide` / `ceramides` pairs read as spurious (09-24: 2 false positives, 0 with the fold). If `spurious_nulls > 0` again, first check the offender against the code's own `opener_collides` before calling it a regression.
-* **A product that is `null_basis` on two consecutive runs is the finding to escalate — EXCEPT a shared-strength or shared-key-ingredient collision.** AC3 was restated 2026-09-24 and extended 2026-09-28: a collision on a list whose cards share a strength (Azelaic Acid, where 6 of 12 head products are 10% and cards keep opening on "10%") or a key ingredient (Heavy/Rich, where Aquaphor Healing Ointment and Vanicream Moisturizing Cream keep opening on "Petrolatum") re-rolls daily and is **counted, not failed**. Report it as a count, not an escalation. Escalate only a repeat NULL whose opener is NEITHER a shared strength/number NOR a shared key ingredient. Name the products either way; do not average them away.
-* #787's unfreeze had never fired in production as of 09-24 (zero `unfreezing … (NEX-830)` lines on 09-23/09-24). Do not credit a cleared card to #787 without that log line.
-
-🚨 **Do NOT read the stage's regenerated count as an AC4 miss without checking what shipped.** `compute_concern_basis` fingerprints `SYSTEM_PROMPT` and the rendered prompt, so **any** change to `SYSTEM_PROMPT` / `build_concern_prompt` / `MODEL` / `CONCERN_BASIS_VERSION`, or a catalog-wide ingredient/INCI rewrite, correctly invalidates every stored basis and produces a **full pass by design**. That is the gate working, not failing. Two such days already exist (09-16, ingredient membership moved to the INCI rule; 09-18, `SYSTEM_PROMPT` gained rule 11), and #770 moved ingredient tags again on 09-18. Check `git log --since=<previous run> -- pipeline/src/nextbest/concern_synthesize.py` and for INCI/ingredient-chip merges before calling a high count a regression; on such a day report AC4 as **not readable**, not as missed.
-
-The stage log line settles it and is readable for past runs — Prefect `logs/filter`, retention back to 2026-06-16 (Railway's does NOT go back far enough). Filter by `logs.timestamp`, page 200 at a time on `offset`; no flow-run id needed:
-
-```bash
-AUTH=$(railway variables --service prefect-worker --kv | grep '^PREFECT_API_AUTH_STRING=' | cut -d= -f2-)
-curl -s -u "$AUTH" -X POST https://prefect-server-production-013d.up.railway.app/api/logs/filter \
-  -H 'Content-Type: application/json' -d '{"logs":{"timestamp":{"after_":"<ISO>","before_":"<ISO>"}},
-  "limit":200,"offset":0,"sort":"TIMESTAMP_ASC"}'
-```
-
-Grep for `pairs considered`. Stage INFO lines only reach Prefect from 2026-09-16 13:37 UTC (NEX-815 #752); earlier runs have none.
-
-**Remove this entry when:** two consecutive steady-state runs read `spurious_nulls = 0` AND no single product appears in `null_basis` on both of them — or Kayleigh restates AC3 and folds this count into the ticket's own Post-Merge Verification, whichever comes first.
-
 #### NEX-823 — hand-check every ASIN the daily sweep nulled or left uncertain
 
 *Armed 2026-09-23. Kayleigh accepted the scheduled `creators_dp_recheck` sweep as AC4's execution **on the condition that the review hand-checks each null** — this entry IS that supervision. Skipping it silently removes the only human check on an unsupervised write.*
@@ -186,6 +114,8 @@ Rows already checked (do not re-report): `c8857ecc` Etude Hydro Barrier Cream �
 **How to read it:** for each NEW row, compare the intended product (the `dedup_key` slug) against `observed_title` and say in the NEX-823 comment whether the null was right. A null of the correct SKU is a **regression** — report it as such and recommend pausing the apply. Also quote the Prefect line `visited N, nulled N, confirmed N, uncertain N, unobserved N … canary probes N` and the remaining unverified leg-0 count (~261 on 09-23).
 
 **Remove this entry when:** the unverified leg-0 backlog reads 0 (AC4 met), or Kayleigh says the sweep no longer needs a daily hand-check.
+
+*(Previously armed and retired: the NEX-830 opener-collision check, armed 2026-09-18 and removed 2026-09-29 — 09-28 and 09-29 were consecutive steady-state runs with `spurious_nulls = 0` and no product `null_basis` on both (09-29: `head_cards 727 | null_basis 1 | collision 2 | spurious 0`). #772's overturn and #787's unfreeze were both seen firing in the 09-29 Prefect log.)*
 
 *(Previously armed and retired: the NEX-805 Sentry check, armed 2026-09-23 and removed 2026-09-24. The AC6 window read clean: 2 new issues, neither on a tag route. Kayleigh closed the ticket in the live session.)*
 
