@@ -154,7 +154,8 @@ other lanes, then research and write it the same way.
      do not apply** — report the plan in the digest. (`protected (other source)` above 0 is normal.)
    - Load only files `inci-spot-check` wrote (`*_checked.json`) — never an agent's raw output.
    - If the spot check keeps no rows, there is nothing to load; say so.
-   - Record the spot check's summary line and the apply's `--coverage` output.
+   - Record the spot check's summary line, its `repeat drops:` line and every `REPEAT` line, and
+     the apply's `--coverage` output.
 
 6. **Second wave: `new_brand`.** Now pull it (cap 40), research it, validate it and write it back,
    exactly as steps 2–5 (5b is not repeated: the gap queue is loaded once per run).
@@ -183,7 +184,9 @@ SKILL.md Step 3 has the template. The parts that are easy to get wrong:
 - **Report raw numerator and denominator**, never a bare rate.
 - **INCI (NEX-840):** `inci: attached N` on the new_product write-back; how many INCI rows came back
   null, with the agents' reasons; `inci-gap`'s coverage and `overdue` lines before the load; the
-  spot check's `pass / fail / unreachable / unresolved` line with every dropped row and why; the
+  spot check's `pass / fail / unreachable / unresolved` line with every dropped row and why, and
+  **every `REPEAT` line as a headline** — a product dropped on 2+ runs, which research will not
+  clear; ask Kayleigh per SKILL.md Step 1 whether to load it by hand or record it null; the
   load's written counts and the `--coverage` output after it. Overdue > 0 after the load is the
   headline, not a footnote.
 - **`precheck-blocked` is a queue-health signal** — break it down by failing gate, since which gate
