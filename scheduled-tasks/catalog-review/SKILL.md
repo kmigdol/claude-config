@@ -171,9 +171,10 @@ other lanes, then research and write it the same way.
    - **Exit 3 = the NEX-907 migration is not on this database.** Skip both link lanes and put one
      line in the digest. Any other non-zero exit from `link-queue.ts` stops the link lanes only, not
      the taxonomy lanes already written; report the command and error.
-   - Both lanes are **not yet scored** (SKILL.md "Score before trust"). Research and write them
-     back as usual. In the walkthrough, present them row by row with evidence, and offer no
-     class-level approve until Kayleigh has scored a batch.
+   - Whether a link lane gets class-level approve in the walkthrough is decided by SKILL.md's
+     "Score before trust" table, not by this file. A lane marked scored gets class-level approve;
+     a lane not yet scored gets per-row decisions only. Kayleigh marked both scored on 2026-09-30
+     (PR #879).
    - Dispatch the link agents in one message, batches of ~20, like step 3.
 
 7. **Read back what is now decidable**, per lane, with `--researched-only`, and group by
