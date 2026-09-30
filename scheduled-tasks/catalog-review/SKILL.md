@@ -1,6 +1,6 @@
 ---
 name: catalog-review
-description: Weekday research of pending alias_flag, new_product, duplicate_product, new_tag and new_brand taxonomy proposals with parallel web agents, plus INCI agents for new products and the INCI gap queue (NEX-840); writes verdicts and INCI lists into each proposal's dossier, loads spot-checked gap lists, and replies with a digest (no Linear comment). Never changes a proposal's status unattended; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
+description: Weekday research of pending alias_flag, new_product, duplicate_product, new_tag and new_brand taxonomy proposals with parallel web agents, plus INCI agents for new products and the INCI gap queue (NEX-840), plus the buy-link lanes (pending /admin/asin-review rows and top-clicked live links, NEX-907); writes verdicts and INCI lists into each proposal's dossier, loads spot-checked gap lists, and replies with a digest (no Linear comment). Never changes a proposal's status unattended; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
 ---
 
 Daily catalog audit for the nextbest taxonomy proposal queue. It researches pending proposals with parallel web-research agents, writes the verdicts into each proposal's own dossier fields, and reports a digest. **Report only — you must never change a proposal's status.**
@@ -95,7 +95,8 @@ other lanes, then research and write it the same way.
    Record what each `list` prints — the precheck line, the SKU blocker breakdown, the category
    vocabulary line, and (default pulls only) `re-researchable (brand-struck no_attach)`. `list`
    excludes rows this skill already stamped, so each run walks forward through the backlog.
-   **If every lane comes back with `count: 0`, post a one-line digest and stop.**
+   **If every lane comes back with `count: 0`, skip ahead to step 6b (the buy-link lanes). Stop
+   with a one-line digest only if those are empty too.**
 
 3. **Batch and dispatch.** Split each lane's `cards` into batches of ~20, each its own JSON file
    (a `new_tag` batch keeps the file's `categories_by_vertical`). Then one `Agent` call per batch,
@@ -160,6 +161,21 @@ other lanes, then research and write it the same way.
 6. **Second wave: `new_brand`.** Now pull it (cap 40), research it, validate it and write it back,
    exactly as steps 2–5 (5b is not repeated: the gap queue is loaded once per run).
 
+6b. **Buy-link lanes (NEX-907): `link_queue` and `live_links`, 40 each.** Follow SKILL.md's
+   "Retailer-link lanes (NEX-907)" section exactly; it holds the commands, the PostHog clicks query,
+   both agent prompts, and the write-back. The helper is `scripts/link-queue.ts` (NOT
+   proposal-queue.ts). The unattended part is `list` and `write-research` only; **never `apply`**.
+   - `live_links` needs `clicks.json` from the PostHog `execute-sql` query first. If PostHog is
+     unreachable or the query returns 0 rows, skip `live_links` (the helper refuses an empty file)
+     and say so in the digest. Still run `link_queue`.
+   - **Exit 3 = the NEX-907 migration is not on this database.** Skip both link lanes and put one
+     line in the digest. Any other non-zero exit from `link-queue.ts` stops the link lanes only, not
+     the taxonomy lanes already written; report the command and error.
+   - Both lanes are **not yet scored** (SKILL.md "Score before trust"). Research and write them
+     back as usual. In the walkthrough, present them row by row with evidence, and offer no
+     class-level approve until Kayleigh has scored a batch.
+   - Dispatch the link agents in one message, batches of ~20, like step 3.
+
 7. **Read back what is now decidable**, per lane, with `--researched-only`, and group by
    `agent.decision_class` for the digest's class counts. This includes rows earlier runs researched
    and nobody has actioned yet — that backlog is exactly what the digest is for.
@@ -189,6 +205,10 @@ SKILL.md Step 3 has the template. The parts that are easy to get wrong:
   clear; ask Kayleigh per SKILL.md Step 1 whether to load it by hand or record it null; the
   load's written counts and the `--coverage` output after it. Overdue > 0 after the load is the
   headline, not a footnote.
+- **Buy links (NEX-907):** use SKILL.md's "Buy links" digest block. Give verdict counts per lane;
+  list every `wrong_sku`/`dead` live link on its own line (product, retailer, current link,
+  evidence, proposed fix). Report live_links `coverage` as `clicked_links_audited_within_window /
+  clicked_links`, and the queue's `total_pending`.
 - **`precheck-blocked` is a queue-health signal** — break it down by failing gate, since which gate
   dominates says what would unblock the most rows.
 
