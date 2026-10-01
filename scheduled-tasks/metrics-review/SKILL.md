@@ -115,26 +115,7 @@ Rows already checked (do not re-report): `c8857ecc` Etude Hydro Barrier Cream �
 
 **Remove this entry when:** the unverified leg-0 backlog reads 0 (AC4 met), or Kayleigh says the sweep no longer needs a daily hand-check.
 
-#### NEX-873 — check the "Fragrance" alias is not inverting Fragrance-Free
-
-*Armed 2026-09-29. On 2026-09-28 Kayleigh kept the alias "Fragrance" → `fragrance-free` (tag `ef932587-29dc-4f5a-86f1-702b1807ddae`, quality). By design (NEX-757 caution pole), fit='caution' on Fragrance-Free means "the fragrance caused a problem", which is correct. The risk is fit='works' on a mention that credits the product for HAVING a scent ("love the fragrance"). That row counts as a Fragrance-Free credit, which inverts the meaning. Two paths can produce it: NEX-873's raw spelling "fragrance" with fit='works', and the extract prompt, which lists aliases and says to use the tag's exact name. Baseline 09-28: 0 `catalog_mentions` rows with raw "fragrance", and 11/11 scent-quoting Fragrance-Free works rows since 09-14 were genuine credits.*
-
-Run via Supabase `execute_sql`. Read `catalog_mentions`, never `match_attempts` (it keeps leftover rows from older extractions):
-
-```sql
-select lower(tg->>'tag_raw') raw, tg->>'fit' fit, coalesce(tg->>'source','tags') src, count(*) n
-from catalog_mentions cm cross join lateral jsonb_array_elements(cm.tags) tg
-join thread_extractions te on te.post_id = cm.post_id and te.platform = cm.platform
-where tg->>'tag_id' = 'ef932587-29dc-4f5a-86f1-702b1807ddae'
-  and te.extracted_at >= '2026-09-29 10:00+00'
-group by 1,2,3 order by 4 desc;
-```
-
-Then read the quotes on EVERY works row whose `tag_raw` is not a fragrance-free spelling (fragrance, fragrances, scent, scented, perfume…). Also read the quotes on up to 20 works rows whose quotes match `fragran|scent|smell|perfum`. Classify each by hand as either a genuine fragrance-free credit or inverted (credits the scent). In the NEX-873 comment, report "inversions: N of M read" and quote any inversion.
-
-**If any inversion:** recommend removing the alias through a `tag_alias_flag` proposal (the `delete_tag_alias` action via /admin/taxonomy, never raw SQL), and ask Kayleigh before filing anything. It does not hold NEX-873 in Monitoring. Once it's handed off, remove this entry.
-
-**Remove this entry when:** a read covers ≥3 days of post-NEX-873 extractions (`extracted_at >= 2026-09-29 10:00 UTC`) with 0 inversions, or when an inversion has been handed off.
+*(Previously armed and retired: the NEX-873 Fragrance-alias inversion check, armed 2026-09-29 and removed 2026-10-01 — three extraction days (09-29: 213 threads, 09-30: 818, 10-01: 118) read with **0 inversions** across all 31 Fragrance-Free `works` rows; the only raw "fragrance" row was fit=caution and correct.)*
 
 *(Previously armed and retired: the NEX-830 opener-collision check, armed 2026-09-18 and removed 2026-09-29 — 09-28 and 09-29 were consecutive steady-state runs with `spurious_nulls = 0` and no product `null_basis` on both (09-29: `head_cards 727 | null_basis 1 | collision 2 | spurious 0`). #772's overturn and #787's unfreeze were both seen firing in the 09-29 Prefect log.)*
 
