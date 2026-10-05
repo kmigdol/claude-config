@@ -109,11 +109,13 @@ where dossier_json->'creators_dp_recheck'->>'outcome' in ('dp_rejected','dp_unce
 order by disproved_at desc nulls last
 ```
 
-Rows already checked (do not re-report): `c8857ecc` Etude Hydro Barrier Cream → `B091PN6NPT` "SoonJung 2x Barrier Repair Cream" — **rejected, correct** (distinct SKU). `6b626773` Zyrtec → `B0F2JRBVSM` "Zyrtec 24-Hour … 5 mg, 35 ct" — **uncertain, ASIN kept** (judges split; intended name is the colloquial brand, so keeping it is reasonable).
+Rows already checked (do not re-report): `c8857ecc` Etude Hydro Barrier Cream → `B091PN6NPT` "SoonJung 2x Barrier Repair Cream" — **rejected, correct** (distinct SKU). `6b626773` Zyrtec → `B0F2JRBVSM` "Zyrtec 24-Hour … 5 mg, 35 ct" — **uncertain, ASIN kept** (judges split; intended name is the colloquial brand, so keeping it is reasonable). Checked 2026-10-05 (do not re-report): `b7617e28` Isntree, `79612af1` Vanicream Light Lotion, `fa932752` Skin Aqua, `38eab707` LRP Toleriane, `b1bc4703` Aveeno — all correct nulls; `a3f4da61` Skinfood Salmon — borderline null (n=1).
 
 **How to read it:** for each NEW row, compare the intended product (the `dedup_key` slug) against `observed_title` and say in the NEX-823 comment whether the null was right. A null of the correct SKU is a **regression** — report it as such and recommend pausing the apply. Also quote the Prefect line `visited N, nulled N, confirmed N, uncertain N, unobserved N … canary probes N` and the remaining unverified leg-0 count (~261 on 09-23).
 
-**Remove this entry when:** the unverified leg-0 backlog reads 0 (AC4 met), or Kayleigh says the sweep no longer needs a daily hand-check.
+**Retired rows:** a row at `asin_dp_probe_attempts >= 3` that is still uncertain keeps its ASIN under #898 and never stamps verified. List every such row in the NEX-823 comment, with its ASIN and observed title, for a hand decision. A mechanical-mismatch ASIN (e.g. "Glaxal Base" → CeraVe) is one Kayleigh would want removed. On 2026-10-05 she approved changing the sweep to remove those instead of keeping them; until that ships, they show up here.
+
+**Remove this entry when:** 0 rows remain selectable (attempts < 3, unverified) at the end of a sweep, AC4 is met, and the retired rows have each had a hand decision. Kayleigh reworded this on 2026-10-05: under #898 the old "backlog reads 0" can never be met, because retired rows stay unverified. Also remove it if Kayleigh says the sweep no longer needs a daily hand-check.
 
 *(Previously armed and retired: the NEX-873 Fragrance-alias inversion check, armed 2026-09-29 and removed 2026-10-01 — three extraction days (09-29: 213 threads, 09-30: 818, 10-01: 118) read with **0 inversions** across all 31 Fragrance-Free `works` rows; the only raw "fragrance" row was fit=caution and correct.)*
 
