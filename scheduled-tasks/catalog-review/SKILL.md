@@ -210,6 +210,9 @@ SKILL.md Step 3 has the template. The parts that are easy to get wrong:
   list every `wrong_sku`/`dead` live link on its own line (product, retailer, current link,
   evidence, proposed fix). Report live_links `coverage` as `clicked_links_audited_within_window /
   clicked_links`, and the queue's `total_pending`.
+- **Buy links found by research (NEX-919):** on new_product and new_brand, the line
+  `approvable with no buy link N → link found M`, copied from what `list` prints (SKILL.md Step 3) —
+  never counted by hand. If `list` does not print it yet (NEX-919 not merged), say so instead.
 - **`precheck-blocked` is a queue-health signal** — break it down by failing gate, since which gate
   dominates says what would unblock the most rows.
 
