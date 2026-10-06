@@ -57,10 +57,10 @@ her request.
 `alias_flag`, `new_product`, `duplicate_product`, `new_tag`, `new_brand`, `tag_alias_flag`.
 **SKILL.md's lane-coverage table under "Score before trust" is the authority on which the routine
 may pull** — as of 2026-09-18 every lane says yes, both new_tag and new_brand having been scored
-against Kayleigh's own resolutions that day. **`tag_alias_flag` joined on 2026-10-05 (NEX-918)** as
-**research and digest only**: it is pulled, researched and written back like the others, but until
-it is scored it is decided per row, never by class. If a row there ever says otherwise, honour it
-and say so in the digest.
+against Kayleigh's own resolutions that day. **`tag_alias_flag` joined on 2026-10-05 (NEX-918)** and
+was **scored on 2026-10-06**: keep / delete / reassign classes take class-level approval; a
+`promote` row and any `confidence: low` row are still decided per row. If a row there ever says
+otherwise, honour it and say so in the digest.
 
 A `tag_alias_flag` card is one flagged TAG alias — a Reddit phrase filing posts under a concern,
 skin-type, quality or ingredient tag the judge thinks is wrong — not a product alias. Write "the
@@ -74,7 +74,7 @@ Pull order and caps, oldest first:
 | 2 | `new_product` | 100 | raised from 40 on 2026-09-24 (Kayleigh) — the lane with the backlog |
 | 3 | `duplicate_product` | 100 | usually empty; a pair is two products we already carry |
 | 4 | `new_tag` | 100 | small lane |
-| 5 | `tag_alias_flag` | 40 | NEX-918, added 2026-10-06; research and digest only — decided per row until scored |
+| 5 | `tag_alias_flag` | 40 | NEX-918, added 2026-10-06; scored 2026-10-06 — promote and low-confidence rows per row |
 | 6 | `new_brand` | **40** | SECOND WAVE — see below; brand cards are the heaviest (raised from 20 on 2026-09-24) |
 
 **`new_brand` is pulled only AFTER `new_product`'s `write-research` has run.** A pending product
@@ -225,8 +225,8 @@ SKILL.md Step 3 has the template. The parts that are easy to get wrong:
 - **`new_tag`: show the name that would be created** when house casing moves it
   (`precheck.created_name`), with the proposed spelling beside it.
 - **`tag_alias_flag` (NEX-918): list every researched row** as a plain-language bullet — `"<alias>"
-  currently files posts under <tag>; recommended: …; approving …` with its citation — since the lane
-  is decided per row. Carry the `precheck:` line (judge target / reassign refused by code / default
+  currently files posts under <tag>; recommended: …; approving …` with its citation — each row moves
+  posts between named tags. Carry the `precheck:` line (judge target / reassign refused by code / default
   promote collisions by code). SKILL.md Step 3's template has the block.
 - **`undecided` is a finding, not a failure**, and `needs_enrichment` is not an error.
 - **No single accuracy number, ever.** Counts per decision class; the classes speak for themselves.
@@ -269,11 +269,11 @@ failed row may still have been consumed — check the row before retrying"). The
   `delete_tag_alias`), so approving it is an
   approve, not a reject. If auto mode blocks that production call, ask Kayleigh to allow it or print
   the command — never work around it.
-- **A `tag_alias_flag` row is decided one row at a time** until the lane is scored — never a
-  class-level "yes to all". Present it per SKILL.md's Present mode: what the phrase does today, what
-  approving changes, the judge's reasoning, two or three sample thread titles with URLs, and the
-  citation. A cross-type reassign is sent only with her override's `cross_type: true`. Her per-row
-  decisions are the lane's first scoring batch.
+- **`tag_alias_flag` is presented by class, every row still shown** — scored 2026-10-06, so a
+  keep / delete / reassign class gets one yes/no. A `promote` row and any `confidence: low` row still
+  end with their own question. Per SKILL.md's Present mode, each row shows what the phrase does today,
+  what approving changes, the judge's reasoning, two or three sample thread titles with URLs, and the
+  citation. A cross-type reassign is sent only with her override's `cross_type: true`.
 - **An `ORPHAN BRAND` line is reported to her verbatim and never auto-fixed.**
 - **A `duplicate_product` merge sends no request** — print the `merge-products` dry-run and apply
   commands and record the row as `manual`.
