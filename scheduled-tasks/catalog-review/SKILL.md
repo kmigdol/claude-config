@@ -1,6 +1,6 @@
 ---
 name: catalog-review
-description: Weekday research of pending alias_flag, new_product, duplicate_product, new_tag and new_brand taxonomy proposals with parallel web agents, plus INCI agents for new products and the INCI gap queue (NEX-840), plus the buy-link lanes (pending /admin/asin-review rows and top-clicked live links, NEX-907); writes verdicts and INCI lists into each proposal's dossier, loads spot-checked gap lists, and replies with a digest (no Linear comment). Never changes a proposal's status unattended; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
+description: Weekday research of pending alias_flag, new_product, duplicate_product, new_tag, new_brand and tag_alias_flag taxonomy proposals with parallel web agents, plus INCI agents for new products and the INCI gap queue (NEX-840), plus the buy-link lanes (pending /admin/asin-review rows and top-clicked live links, NEX-907); writes verdicts and INCI lists into each proposal's dossier, loads spot-checked gap lists, and replies with a digest (no Linear comment). Never changes a proposal's status unattended; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
 ---
 
 Daily catalog audit for the nextbest taxonomy proposal queue. It researches pending proposals with parallel web-research agents, writes the verdicts into each proposal's own dossier fields, and reports a digest. **Report only — you must never change a proposal's status.**
@@ -52,12 +52,19 @@ her request.
    exit code first (redirect to a file, then `echo "EXIT=$?"`); a masked exit code has produced a
    false "it worked" before.
 
-## The five lanes
+## The six lanes
 
-`alias_flag`, `new_product`, `duplicate_product`, `new_tag`, `new_brand`. **SKILL.md's lane-coverage
-table under "Score before trust" is the authority on which the routine may pull** — as of
-2026-09-18 every lane says yes, both new_tag and new_brand having been scored against Kayleigh's own
-resolutions that day. If a row there ever says otherwise, honour it and say so in the digest.
+`alias_flag`, `new_product`, `duplicate_product`, `new_tag`, `new_brand`, `tag_alias_flag`.
+**SKILL.md's lane-coverage table under "Score before trust" is the authority on which the routine
+may pull** — as of 2026-09-18 every lane says yes, both new_tag and new_brand having been scored
+against Kayleigh's own resolutions that day. **`tag_alias_flag` joined on 2026-10-05 (NEX-918)** as
+**research and digest only**: it is pulled, researched and written back like the others, but until
+it is scored it is decided per row, never by class. If a row there ever says otherwise, honour it
+and say so in the digest.
+
+A `tag_alias_flag` card is one flagged TAG alias — a Reddit phrase filing posts under a concern,
+skin-type, quality or ingredient tag the judge thinks is wrong — not a product alias. Write "the
+phrase "<alias>" on <tag>", never a bare "alias".
 
 Pull order and caps, oldest first:
 
@@ -67,7 +74,8 @@ Pull order and caps, oldest first:
 | 2 | `new_product` | 100 | raised from 40 on 2026-09-24 (Kayleigh) — the lane with the backlog |
 | 3 | `duplicate_product` | 100 | usually empty; a pair is two products we already carry |
 | 4 | `new_tag` | 100 | small lane |
-| 5 | `new_brand` | **40** | SECOND WAVE — see below; brand cards are the heaviest (raised from 20 on 2026-09-24) |
+| 5 | `tag_alias_flag` | 40 | NEX-918, added 2026-10-06; research and digest only — decided per row until scored |
+| 6 | `new_brand` | **40** | SECOND WAVE — see below; brand cards are the heaviest (raised from 20 on 2026-09-24) |
 
 **`new_brand` is pulled only AFTER `new_product`'s `write-research` has run.** A pending product
 joins a brand's bundle only once its own dossier says `approve` with `researched_at`, so today's
@@ -84,7 +92,7 @@ other lanes, then research and write it the same way.
 
    Keep the JSON line. It goes in the digest and is the baseline for any after-snapshot.
 
-2. **Pull the first four lanes**, capped as above. Write the queue files into
+2. **Pull the first five lanes** (orders 1–5: every lane but `new_brand`), capped as above. Write the queue files into
    `/private/tmp/catalog-audit-<YYYY-MM-DD>/` (create it) and **state the paths you used** in the
    digest so a later walkthrough can find them. `--out` is REQUIRED on every `list`.
 
@@ -93,7 +101,9 @@ other lanes, then research and write it the same way.
    ```
 
    Record what each `list` prints — the precheck line, the SKU blocker breakdown, the category
-   vocabulary line, and (default pulls only) `re-researchable (brand-struck no_attach)`. `list`
+   vocabulary line, and (default pulls only) `re-researchable (brand-struck no_attach)`. For
+   `tag_alias_flag`, keep its `recommendations:` and `precheck:` lines (`judge target N | reassign
+   refused N (<code> N …) | default promote collisions N (<code> N …)`, no_scope excluded). `list`
    excludes rows this skill already stamped, so each run walks forward through the backlog.
    **If every lane comes back with `count: 0`, skip ahead to step 6b (the buy-link lanes). Stop
    with a one-line digest only if those are empty too.**
@@ -107,6 +117,18 @@ other lanes, then research and write it the same way.
 
    `new_brand` agents also need a brands file — write it first with a read-only query against
    production and put the path in the prompt (the SKILL.md step names the query).
+
+   **`tag_alias_flag` agents (NEX-918)** get the **tag_alias_flag agent prompt** from SKILL.md
+   verbatim, plus:
+   - **a read-only tags file** — write SKILL.md Step 1's `tags.json` query (every tag's id, name,
+     slug, type and aliases; `SELECT` only) into the run directory and put its path in the prompt;
+   - **`categories_by_vertical` kept in every batch file** — a promote agent chooses its scope from
+     `categories_by_vertical[card.vertical_id]` exactly like a `new_tag` agent. A card whose vertical
+     has no entry cannot be promoted by an agent; say so in the digest.
+   - **reddit.com is not reachable** (403 on WebFetch, curl and the browser tools). The agents read
+     each sample thread from `sample_threads[i].stored` on the card (stored title, body cut at 2,500
+     characters, up to 8 comments using the phrase; `null` = not stored), may cite a thread's `url`
+     once they have read its `stored` text, and say in `reason` what the posts use the phrase for.
 
    Tell each agent to write its findings file after every 3–4 cards and to use a helper-script
    filename containing its batch number (on 2026-09-16 two agents stalled with nothing saved, and
@@ -131,7 +153,13 @@ other lanes, then research and write it the same way.
    outputs into one `findings-<lane>.json`. Check exactly one finding per `card_id`, no extras or
    duplicates. **Every finding whose `recommendation` is not `undecided` must carry at least one
    citation URL** — downgrade any that does not to `undecided` with `undecided_reason: "no citable
-   source"`, because `write-research` aborts the entire run on the first uncited one. Then run the
+   source"`, because `write-research` aborts the entire run on the first uncited one.
+   **`tag_alias_flag` downgrades** (SKILL.md Step 2 is the authority): a `promote` without
+   `tag_kind` or a `reassign` without `target_tag_slug` / `target_tag_id` → `undecided:no_source`;
+   a `promote` without `categories` + `categories_mode` → `undecided:needs_category_scope`; a
+   reassign onto a tag of another `type` than the card's `tag_type` →
+   `undecided:cross_type_target`. `name` / `slug` / `move_alias_ids` / `target_tag_*` on the wrong
+   recommendation, and `override` / `cross_type` on any finding, abort the file — drop them. Then run the
    within-lane duplicate pass exactly as SKILL.md Step 2 describes, and report its count in the form
    that section requires — a single-batch lane says so rather than reporting a bare 0.
 
@@ -196,6 +224,10 @@ SKILL.md Step 3 has the template. The parts that are easy to get wrong:
   on them.
 - **`new_tag`: show the name that would be created** when house casing moves it
   (`precheck.created_name`), with the proposed spelling beside it.
+- **`tag_alias_flag` (NEX-918): list every researched row** as a plain-language bullet — `"<alias>"
+  currently files posts under <tag>; recommended: …; approving …` with its citation — since the lane
+  is decided per row. Carry the `precheck:` line (judge target / reassign refused by code / default
+  promote collisions by code). SKILL.md Step 3's template has the block.
 - **`undecided` is a finding, not a failure**, and `needs_enrichment` is not an error.
 - **No single accuracy number, ever.** Counts per decision class; the classes speak for themselves.
 - **Report raw numerator and denominator**, never a bare rate.
@@ -233,15 +265,22 @@ with `--base-url https://www.nextbest.one --env .env.prod`, then report the ledg
 (`ok / noop / skipped / failed`, every skipped and failed row with its reason, and the caveat "a
 failed row may still have been consumed — check the row before retrying"). Then the next class.
 
-- **A `delete` class goes through the APPROVE route** (`delete_product_alias`), so approving it is an
+- **A `delete` class goes through the APPROVE route** (`delete_product_alias`; on tag_alias_flag
+  `delete_tag_alias`), so approving it is an
   approve, not a reject. If auto mode blocks that production call, ask Kayleigh to allow it or print
   the command — never work around it.
+- **A `tag_alias_flag` row is decided one row at a time** until the lane is scored — never a
+  class-level "yes to all". Present it per SKILL.md's Present mode: what the phrase does today, what
+  approving changes, the judge's reasoning, two or three sample thread titles with URLs, and the
+  citation. A cross-type reassign is sent only with her override's `cross_type: true`. Her per-row
+  decisions are the lane's first scoring batch.
 - **An `ORPHAN BRAND` line is reported to her verbatim and never auto-fixed.**
 - **A `duplicate_product` merge sends no request** — print the `merge-products` dry-run and apply
   commands and record the row as `manual`.
 - A class she did not name is untouched: not held, not rejected, still pending for `/admin/taxonomy`.
 - At the end, take a `counts` after-snapshot and report it beside the before, with the promote
-  narration (a `promote` creates a NEW pending `new_product` row, so that count *rises*).
+  narration (an alias_flag `promote` creates a NEW pending `new_product` row, so that count
+  *rises*; a tag_alias_flag promote creates its tag directly and opens no proposal).
 - **INCI gap lists are loaded by the unattended run itself** (step 5b). If it stopped at a gate,
   show her the plan it stopped on and ask before re-running.
 
