@@ -1,9 +1,9 @@
 ---
 name: catalog-review
-description: Weekday research of pending alias_flag, new_product, duplicate_product, new_tag, new_brand and tag_alias_flag taxonomy proposals with parallel web agents, plus INCI agents for new products and the INCI gap queue (NEX-840), plus the buy-link lanes (pending /admin/asin-review rows and top-clicked live links, NEX-907); writes verdicts and INCI lists into each proposal's dossier, loads spot-checked gap lists, and replies with a digest (no Linear comment). Never changes a proposal's status unattended; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
+description: Weekday catalog run: first triages the most-discussed unmatched Reddit names and files the real products/tags as pending proposals (NEX-935), then researches pending alias_flag, new_product, duplicate_product, new_tag, new_brand and tag_alias_flag proposals with parallel web agents, plus INCI and buy-link lanes; replies with a digest that leads with a "New from Reddit" report. Never changes a proposal's status unattended; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
 ---
 
-Daily catalog audit for the nextbest taxonomy proposal queue. It researches pending proposals with parallel web-research agents, writes the verdicts into each proposal's own dossier fields, and reports a digest. **Report only — you must never change a proposal's status.**
+Daily catalog audit for the nextbest taxonomy proposal queue. It first triages the most-discussed Reddit names the catalog cannot match and files the real ones as pending proposals (NEX-935, Step 0), then researches pending proposals with parallel web-research agents, writes the verdicts into each proposal's own dossier fields, and reports a digest that leads with a "New from Reddit" report. **You must never change a proposal's status** — filing a pending row and skipping a junk name are the only unattended writes beyond research.
 
 Follow `.claude/skills/catalog-audit/SKILL.md` in the repo at `/Users/kayleigh/dev/nextbest` —
 the **MAIN checkout**, not a worktree. That file is the authority on the helper's flags, the
@@ -15,13 +15,29 @@ NEX-798 left Monitoring (2026-09-15) and Kayleigh said to stop commenting on it;
 another ticket to post to. SKILL.md's "post it as a Linear comment" steps do not apply to this
 routine — this line overrides them.
 
-## 🚨 Unattended means report-only
+## 🚨 Unattended means no decisions
 
 **Never run `apply`. Never change any proposal's status. Never approve, reject, merge, delete,
 promote or reassign anything.** `apply` is the only command that resolves a proposal, and it runs
 only in the walkthrough, only on Kayleigh's explicit "approve `<class>`" for a class she named.
 
-`counts`, `list`, `inci-input` and `write-research` are the whole unattended surface of the helper.
+**Step 0 (triage, NEX-935) FILES and SKIPS, which is not deciding:** a filed row is a new
+`pending` proposal Kayleigh still approves in the walkthrough; a skip hides a junk name from
+tomorrow's triage and is revertible (`unskip`). Its unattended commands, and nothing else:
+`proposal-queue.ts unmatched` (incl. `--gap-report [--classified]`), `skip` / `skip --from-file
+--only-generic` with `--apply`, `skip-list`; `python -m nextbest classify-generic` (no database);
+`propose-product … --routine` and `propose-tag … --routine` (dry run, then the identical line with
+`--apply`; never `--refile-rejected`); `research-dossier --mechanical --proposal-id <ids filed this
+run>` (LLM-free). Read-only `SELECT`s for the triage catalog files. Pipeline commands reach prod as
+`cd /Users/kayleigh/dev/nextbest && railway run --service nextbest --environment production --
+pipeline/.venv/bin/python -m nextbest …`.
+
+**If the permission classifier blocks any production write (a `propose-*` / `skip` `--apply`,
+`research-dossier`), never route around it** — no SQL, no `.rpc(`, no second tool. Put the dry-run
+plan and the exact one-line command in the digest's **Blocked writes — for Kayleigh to run** block
+and carry on with the rest of the run.
+
+`counts`, `list`, `inci-input` and `write-research` are the rest of the unattended surface of the helper.
 `write-research` writes research into `dossier_json` on rows that stay `pending` — that is the
 deliverable, and it is not a status change. The pipeline side (NEX-840) is `nextbest inci-gap`
 (read-only), `nextbest inci-spot-check` (no database) and **`nextbest load-inci`, the one
@@ -84,6 +100,32 @@ other lanes, then research and write it the same way.
 
 ## Steps
 
+0. **Triage unmatched names (NEX-935) — runs FIRST, before the snapshot.** Discovery moved out of
+   the pipeline into this routine (PR #943, merged 2026-10-07): it pulls the most-discussed Reddit
+   names the matcher could not place and decides, name by name, whether to file or skip each.
+   **Follow `routine-prompt.md` Step 0 (a–f) and SKILL.md "Step 0a" in the main checkout exactly**
+   — they hold the commands, the triage agent prompt and the verdict → action table. In short:
+   a. `unmatched --type product --limit 40` and `--type tag --limit 40` (`--env .env.prod`,
+      `--out` into the run directory). Groups are (name, brand). A "could not find the function"
+      error means the migration is missing: skip Step 0 with a digest line and carry on.
+   b. `classify-generic` on the product file, then `skip --from-file --only-generic --reason
+      "generic category word (NEX-564 check)" --by catalog-audit-routine --apply`.
+   c. Triage agents over every non-generic name (~20 per batch, one brand's groups together, all in
+      one message, opus, background) with SKILL.md's **unmatched triage agent prompt** verbatim, plus
+      read-only `products.json` / `tags.json` the agents SEARCH with jq (never read whole).
+   c2. **Consolidate before acting**: overlapping concepts must agree or both become `unclear`; a
+      low-confidence verdict whose reason says the quotes contradict its target becomes `unclear`.
+   d. Act per verdict: `new_sku` → `propose-product --routine` (one call per brand, `--new-brand`
+      when the brand isn't carried); `existing_spelling` → the same call with `--alias-of
+      <target_product_id>` after that product's `--spelling`s; `generic` → `skip --name … [--brand
+      …]`; `rx` → `skip --reason "Rx-only product"`; tags → ONE `propose-tag --routine` call for all
+      `new_tag` + `existing_tag_spelling`; `unclear` → nothing. A `propose-*` exit 1 that refused
+      every name is a per-name result, not a failure.
+   e. `research-dossier --mechanical --proposal-id …` on the filed product (and brand-head) ids;
+      write the ids to `triaged-ids-<lane>.txt`.
+   f. **Mondays only:** the classified gap report (`unmatched --limit 1000 --quotes 0` →
+      `classify-generic` → `unmatched --gap-report --classified`), plus the tag gap report.
+
 1. **Before-snapshot.**
 
    ```
@@ -105,6 +147,11 @@ other lanes, then research and write it the same way.
    `tag_alias_flag`, keep its `recommendations:` and `precheck:` lines (`judge target N | reassign
    refused N (<code> N …) | default promote collisions N (<code> N …)`, no_scope excluded). `list`
    excludes rows this skill already stamped, so each run walks forward through the backlog.
+   **Also pull today's triage filings by id** (they are the newest rows, so the oldest-first pulls
+   miss them): `list --lane new_product --status pending --ids-file triaged-ids-new_product.txt
+   --out queue-new_product-triaged.json` and the same for `new_tag` (and `new_brand` in the second
+   wave), minus ids the default file already holds. Their batches get SKILL.md's **triage hint
+   addendum** appended to the lane prompt.
    **If every lane comes back with `count: 0`, skip ahead to step 6b (the buy-link lanes). Stop
    with a one-line digest only if those are empty too.**
 
@@ -215,6 +262,16 @@ other lanes, then research and write it the same way.
 
 SKILL.md Step 3 has the template. The parts that are easy to get wrong:
 
+- **Lead with triage (NEX-935).** Right under the header: `triaged: N products / M tags → filed X /
+  merge Y / junk Z / Rx W · unclear U · refused R` (or `triage — skipped: <reason>`), then the
+  **New from Reddit** report exactly as routine-prompt.md's digest template shows it: New brands,
+  New products (filed / **refused** with the reason in plain words), Spellings of products we carry
+  (→ our product), New tags (low confidence bolded), Spellings of tags we carry (grouped by target).
+  Kayleigh asked to see every new product, brand and tag here before she approves anything.
+- **Mondays: the Weekly gap report** block before Buy links, pasted unedited.
+- **Blocked writes — for Kayleigh to run:** every production write the classifier blocked, with
+  its dry-run plan and the one-line command. Omit the block when empty.
+
 - **`new_brand`: say what an approve would CREATE** — per approvable brand, its aliases, then each
   sendable SKU as `name · category · attach N · aliases` with struck spellings marked. A bare count
   is unreadable as a result.
@@ -274,6 +331,12 @@ failed row may still have been consumed — check the row before retrying"). The
   end with their own question. Per SKILL.md's Present mode, each row shows what the phrase does today,
   what approving changes, the judge's reasoning, two or three sample thread titles with URLs, and the
   citation. A cross-type reassign is sent only with her override's `cross_type: true`.
+- **A row with no buy link, or a wrong one, gets its listing found IN THE SESSION before its
+  yes/no** (Kayleigh, 2026-10-07): open the listing in the built-in browser, read title / seller /
+  size / stock off the page, record it (`write-research` with `buy_links` / `sku_buy_links`, or
+  `override.amazon` / `override.<key>_url` on a new_product), then ask with the listing shown.
+  Never offer "hold until a research pass" — nothing re-researches a stamped row. Only if no listing
+  checks out, say so and offer approve-linkless or leave pending.
 - **An `ORPHAN BRAND` line is reported to her verbatim and never auto-fixed.**
 - **A `duplicate_product` merge sends no request** — print the `merge-products` dry-run and apply
   commands and record the row as `manual`.
