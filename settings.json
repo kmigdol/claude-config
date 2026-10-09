@@ -49,5 +49,6 @@
   "tui": "fullscreen",
   "theme": "light",
   "agentPushNotifEnabled": true,
-  "skipAutoPermissionPrompt": true
+  "skipAutoPermissionPrompt": true,
+  "skipWorkflowUsageWarning": true
 }

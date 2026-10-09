@@ -95,21 +95,26 @@ Run these IN ADDITION to the ticket's own observables. Each names its own remova
 
 *Armed 2026-09-23. Kayleigh accepted the scheduled `creators_dp_recheck` sweep as AC4's execution **on the condition that the review hand-checks each null** — this entry IS that supervision. Skipping it silently removes the only human check on an unsupervised write.*
 
-The sweep runs inside the daily pipeline (~10:50 UTC), visits ~60 leg-0 rows, and nulls an ASIN only when two judge runs agree. Run via Supabase `execute_sql` (verified 2026-09-23, returns the 2 rows below):
+The sweep runs inside the daily pipeline (~10:50 UTC), visits ~60 leg-0 rows, and nulls an ASIN only when two judge runs agree. Run via Supabase `execute_sql` (widened and re-verified 2026-10-09; returns `a4cc9a93` at the top):
 
 ```sql
 select id, status, dedup_key,
        dossier_json->'creators_dp_recheck'->>'outcome' as outcome,
        dossier_json->'creators_dp_recheck'->>'asin' as asin,
+       dossier_json->'asin_dp_disproved' as disproved_asins,
+       dossier_json->>'amazon_asin' as current_asin,
        dossier_json->'creators_dp_recheck'->>'observed_title' as observed_title,
        dossier_json->'creators_dp_recheck'->>'reason' as reason,
        dossier_json->>'asin_dp_disproved_at' as disproved_at
 from taxonomy_proposals
 where dossier_json->'creators_dp_recheck'->>'outcome' in ('dp_rejected','dp_uncertain')
+   or dossier_json->>'asin_dp_disproved_at' is not null
 order by disproved_at desc nulls last
 ```
 
-Rows already checked (do not re-report): `c8857ecc` Etude Hydro Barrier Cream → `B091PN6NPT` "SoonJung 2x Barrier Repair Cream" — **rejected, correct** (distinct SKU). `6b626773` Zyrtec → `B0F2JRBVSM` "Zyrtec 24-Hour … 5 mg, 35 ct" — **uncertain, ASIN kept** (judges split; intended name is the colloquial brand, so keeping it is reasonable). Checked 2026-10-05 (do not re-report): `b7617e28` Isntree, `79612af1` Vanicream Light Lotion, `fa932752` Skin Aqua, `38eab707` LRP Toleriane, `b1bc4703` Aveeno — all correct nulls; `a3f4da61` Skinfood Salmon — borderline null (n=1).
+**Why the `OR`:** when retry-links re-resolves a row after a null, it overwrites `creators_dp_recheck` (e.g. with `dp_unobserved` and the NEW ASIN), so selecting on `outcome` alone loses the null. The null survives only in `asin_dp_disproved_at`, and the nulled ASIN(s) in the `asin_dp_disproved` array (cumulative — can hold several). For such a row, `asin`/`observed_title` describe the replacement, not the null: judge the null from `disproved_asins` (look the ASIN up), and separately sanity-check `current_asin`. Seen on `a4cc9a93` 10-08 and 10-09. The query also returns older rows nulled outside the sweep (manual NEX-823 fixes, pre-sweep paths); only report rows with `disproved_at` since the last read that are not in the checked list below.
+
+Rows already checked (do not re-report): `c8857ecc` Etude Hydro Barrier Cream → `B091PN6NPT` "SoonJung 2x Barrier Repair Cream" — **rejected, correct** (distinct SKU). `6b626773` Zyrtec → `B0F2JRBVSM` "Zyrtec 24-Hour … 5 mg, 35 ct" — **uncertain, ASIN kept** (judges split; intended name is the colloquial brand, so keeping it is reasonable). Checked 2026-10-05 (do not re-report): `b7617e28` Isntree, `79612af1` Vanicream Light Lotion, `fa932752` Skin Aqua, `38eab707` LRP Toleriane, `b1bc4703` Aveeno — all correct nulls; `a3f4da61` Skinfood Salmon — borderline null (n=1). Checked 2026-10-09 (do not re-report): `a4cc9a93` Eczema Soothing Relief Cream, `1658989e` LRP Toleriane Sensitive (→ Fluide), `bd4d0ffa` Bioderma Atoderm (→ Intensive Balm), `234bc83c` Eucerin Anti-Pigment (→ Dark Circle Eye Corrector) — all correct nulls; `c5914946` Mighty Bamboo Panthenol Cream — uncertain, ASIN kept; `0092a7da` Bliss Tri-Peptide Brightening Moisturizer → `B082YKJ56W` — **WRONG null** (restore of `B082YKJ56W` pending; confirm it landed on the next read).
 
 **How to read it:** for each NEW row, compare the intended product (the `dedup_key` slug) against `observed_title` and say in the NEX-823 comment whether the null was right. A null of the correct SKU is a **regression** — report it as such and recommend pausing the apply. Also quote the Prefect line `visited N, nulled N, confirmed N, uncertain N, unobserved N … canary probes N` and the remaining unverified leg-0 count (~261 on 09-23).
 
