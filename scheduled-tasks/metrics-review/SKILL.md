@@ -91,6 +91,26 @@ The distinction, because it is easy to blur:
 
 Run these IN ADDITION to the ticket's own observables. Each names its own removal condition — **delete the entry when that condition is met**; this list is not meant to accumulate.
 
+#### Bliss bundle — watch `0092a7da`'s attach count until it reaches the page floor
+
+*Armed 2026-10-09. Kayleigh asked for it. No ticket.* The Bliss brand (`dce9d240`) and its only product, Tri-Peptide Brightening Moisturizer (`0092a7da`), are ready to approve. Research is stamped `approve:new_brand`, the image is replaced, and Amazon `B082YKJ56W` is restored. The one thing blocking them is that a bundle product must have **≥3 predicted mentions** (a hard gate for a new brand's products), and this one reads 2. The daily run recounts it.
+
+```sql
+select id, proposal_type, status,
+       dossier_json->>'predicted_attach_count' as attach,
+       dossier_json->>'amazon_asin' as asin,
+       dossier_json->>'image_url' is not null or dossier_json->>'image_rehosted_url' is not null as has_image
+from taxonomy_proposals
+where id in ('0092a7da-1c00-469d-8875-a20b2ed7b9c0','dce9d240-86d6-4019-9d47-ca1ab0f6ffb6')
+```
+
+**How to read it:** report-only, one line: `Bliss bundle: attach N (needs 3)`.
+- **When `attach >= 3`**, lead the digest with it: "Bliss is now approvable. Say 'approve Bliss' to send the bundle." Never approve it from the review.
+- **If the image or ASIN on `0092a7da` has gone null**, say so: something overwrote a reviewer decision.
+- **If either row has left `pending`**, report its new status.
+
+**Remove this entry when:** either row is no longer `pending`, or Kayleigh says to stop watching.
+
 #### NEX-823 — hand-check every ASIN the daily sweep nulled or left uncertain
 
 *Armed 2026-09-23. Kayleigh accepted the scheduled `creators_dp_recheck` sweep as AC4's execution **on the condition that the review hand-checks each null** — this entry IS that supervision. Skipping it silently removes the only human check on an unsupervised write.*
