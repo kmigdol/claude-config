@@ -104,7 +104,7 @@ from taxonomy_proposals
 where id in ('0092a7da-1c00-469d-8875-a20b2ed7b9c0','dce9d240-86d6-4019-9d47-ca1ab0f6ffb6')
 ```
 
-**How to read it:** report-only, one line: `Bliss bundle: attach N (needs 3)`.
+**How to read it:** report-only, one line: `Bliss bundle: attach N (needs 3)`. Read `attach`, `asin` and `has_image` from the **`new_product` row only**. The brand row always shows attach 0 and no image, and that is normal (verified 2026-10-09: product attach 2, ASIN B082YKJ56W, has_image true).
 - **When `attach >= 3`**, lead the digest with it: "Bliss is now approvable. Say 'approve Bliss' to send the bundle." Never approve it from the review.
 - **If the image or ASIN on `0092a7da` has gone null**, say so: something overwrote a reviewer decision.
 - **If either row has left `pending`**, report its new status.
