@@ -251,6 +251,11 @@ other lanes, then research and write it the same way.
      a lane not yet scored gets per-row decisions only. Kayleigh marked both scored on 2026-09-30
      (PR #879).
    - Dispatch the link agents in one message, batches of ~20, like step 3.
+   - **Run `stylevana-feed-titles` before batching, every run** (SKILL.md, Step 0 of that section).
+     It was skipped silently on 2026-10-16 and 10-19 after a permissions denial. Since #1054,
+     `write-research` takes `--cards <the list file>` and refuses, writing nothing, when a Stylevana
+     card on it has no `feed`. A denied or skipped step is not a failure: run it. Pass
+     `--feed-unavailable "<error>"` only when the step ran and failed with that error.
 
 7. **Read back what is now decidable**, per lane, with `--researched-only`, and group by
    `agent.decision_class` for the digest's class counts. This includes rows earlier runs researched
