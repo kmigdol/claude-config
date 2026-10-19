@@ -105,7 +105,7 @@ other lanes, then research and write it the same way.
    names the matcher could not place and decides, name by name, whether to file or skip each.
    **Follow `routine-prompt.md` Step 0 (a–f) and SKILL.md "Step 0a" in the main checkout exactly**
    — they hold the commands, the triage agent prompt and the verdict → action table. In short:
-   a. `unmatched --type product --limit 40` and `--type tag --limit 40` (`--env .env.prod`,
+   a. `unmatched --type product --limit 100` and `--type tag --limit 40` (`--env .env.prod`,
       `--out` into the run directory). Groups are (name, brand). A "could not find the function"
       error means the migration is missing: skip Step 0 with a digest line and carry on.
    b. `classify-generic` on the product file, then `skip --from-file --only-generic --reason
