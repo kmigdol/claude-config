@@ -3,7 +3,10 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "permissions": {
-    "defaultMode": "auto"
+    "defaultMode": "auto",
+    "allow": [
+      "Bash(infra/lightsail/prod-run.sh *)"
+    ]
   },
   "model": "opus[1m]",
   "hooks": {
