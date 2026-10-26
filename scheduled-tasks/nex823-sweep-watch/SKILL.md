@@ -7,7 +7,7 @@ Daily verification read for Linear ticket **NEX-823** (nextbest). **REPORT ONLY.
 
 ## Why this task exists
 
-NEX-823 fixed the Creators ASIN leg attaching a *sibling SKU's* Amazon listing to a product, and added a re-runnable `verify-creators-asins` sweep that repairs already-stored ASINs. The sweep runs inside the daily Prefect `daily-pipeline` at 10:00 UTC, capped at 60 rows/day.
+NEX-823 fixed the Creators ASIN leg attaching a *sibling SKU's* Amazon listing to a product, and added a re-runnable `verify-creators-asins` sweep that repairs already-stored ASINs. The sweep runs inside the `daily-pipeline` job on the Lightsail box (10:00 UTC; NEX-1012 moved it off Railway/Prefect on 2026-10-23), capped at 60 rows/day.
 
 On its **first** production run (2026-09-17) it misbehaved: Amazon anti-bot-blocked the session after 6 reads, and all 54 blocked rows were charged an `asin_dp_probe_attempts`. Three such days retire a row permanently. Root cause: the circuit breaker's "canary" read went through a per-run ASIN cache and so never actually contacted Amazon. Fixed in PRs #766 and #767 (merged `70dfa86`, `0c559d4`). The 54 counters were reset by hand.
 
@@ -15,7 +15,7 @@ On its **first** production run (2026-09-17) it misbehaved: Amazon anti-bot-bloc
 
 ## The read — run these against PRODUCTION, read-only
 
-Production DSN lives in gitignored `/Users/kayleigh/dev/nextbest/pipeline/.env.prod` (`DATABASE_URL=`). SELECT only; never echo the credential.
+Run them through the Supabase MCP `execute_sql` tool (find it with ToolSearch, query `execute_sql`). SELECT only. Do not use `pipeline/.env.prod` — its Postgres password went stale on 2026-10-23.
 
 ```sql
 select
@@ -43,7 +43,12 @@ If any row was disproved in the last 24h, list them (id, canonical_full_name, `c
 
 - **`charged_rows` must be 0. This is the pass/fail.** Non-zero means rows are being charged again — either the breaker is still not detecting a block, or genuinely dead listings are being charged (which is correct behaviour). Distinguish them: dead-listing charges come with `creators_dp_recheck.outcome = 'dp_unobserved'` on a run that *also* verified rows; a block-charge pattern is many charged rows and few or zero verified in the same window. Say which one you think it is, with the numbers.
 - **`verified_last_24h` > 0 means Amazon is serving us** — that is the signal the `--apply` step is unblocked (see below).
-- **`verified_last_24h` = 0 for several consecutive days** means the sweep is making no progress: either Amazon is blocking every run (expected to show as a "stopped blocked" WARNING, nothing charged) or the sweep is not running at all. Check whether the daily pipeline ran: Prefect flow runs, per `docs/runbooks/nex-390-prefect-cron-cutover.md` § "Reading the Prefect server directly" (credential from `railway variables --service prefect-worker --environment production --kv`, key `PREFECT_API_AUTH_STRING`; server `https://prefect-server-production-013d.up.railway.app/api`).
+- **`verified_last_24h` = 0 for several consecutive days** means the sweep is making no progress: either Amazon is blocking every run (expected to show as a "stopped blocked" WARNING, nothing charged) or the sweep is not running at all. Check whether the daily pipeline ran, and what the sweep logged, on the box:
+  ```bash
+  ssh ubuntu@3.18.29.227 'sudo -u nextbest -H /opt/nextbest/infra/lightsail/run-job.sh status'
+  ssh ubuntu@3.18.29.227 "sudo sh -c 'grep -n \"Creators ASIN sweep\" /var/log/nextbest/daily-pipeline-*.log'"
+  ```
+  Each run has its own log, `/var/log/nextbest/daily-pipeline-YYYYmmddTHHMMSSZ.log` (UTC start); older than a day it is `.log.gz`, so use `zgrep`. Keep the `*` inside `sudo sh -c '…'` — outside it the `ubuntu` shell cannot expand the glob and grep reports "No such file", which looks like no run. The sweep prints a `Creators ASIN sweep: visited N, nulled N, confirmed N, …` summary, and a `circuit breaker tripped` line when Amazon blocks it.
 - **`creators_asin_remaining` should trend DOWN** as rows get verified or repaired. It also grows as the daily research lane adds new rows, so read the direction over several days, not one number.
 
 ## What to post
@@ -61,7 +66,7 @@ If the verdict is FAIL, or if `verified_last_24h` has been 0 for 3+ consecutive 
 AC 4 needs a human-supervised sequence that this task must NOT perform:
 1. `verify-creators-asins --dry-run --limit 60`, with every would-null row hand-labelled;
 2. the two-judge-run agreement rate recorded (still unmeasured);
-3. `--apply` **on Railway, not locally**.
+3. `--apply` **on the box, not locally** (`sudo -u nextbest /opt/nextbest/infra/lightsail/run-job.sh cli …`).
 
 When `verified_last_24h` > 0 (Amazon is serving), end your reply with one line: "Amazon is serving /dp reads again — the AC-4 dry-run + apply is unblocked; it needs Kayleigh." Do not run it.
 
