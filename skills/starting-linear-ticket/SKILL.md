@@ -628,6 +628,7 @@ Report completion with PR URL.
 - "The PR is merged, we're done" (still need: Linear state, worktree cleanup, pull main)
 - "It shipped, mark it Done" (if it named a metric, it goes to `Monitoring` — shipping is not the outcome)
 - "It's been a week in Monitoring, close it" (elapsed time is not a result — read the metric)
+- "I'll check back after tomorrow's run" / "I'll set a timer for it" (anything gated on a future run goes in the ticket's `## Monitoring Exit Checklist` for metrics-review, not into this session)
 - "The metric moved, ship it as Done" (re-read EVERY acceptance criterion first, not just the metric)
 - "Linear already flipped it to Done on merge, so it must be fine" (that's the GitHub integration, not a verification)
 - "I'll file a follow-up for the rest and close this one" (goal-completing work — remediation, measurement, e2e — stays in THIS ticket; an AC is never satisfied by filing a ticket for it)
@@ -709,6 +710,23 @@ Report completion with PR URL.
    **A ticket in `Monitoring` is not finished.** It leaves `Monitoring` only when a
    human reads the metric and decides. The `metrics-review` scheduled task posts a
    daily reading on every `Monitoring` ticket; it never moves tickets itself.
+
+   **Waiting on a run belongs to the monitoring job, not this session.** Sort every post-merge
+   step by when it can happen:
+   - **Readable now** (a migration's effect, deploy status, a row just written, a short wait on
+     the deploy this merge triggered): do it in this session, immediately.
+   - **Gated on a run that hasn't happened yet** (the next daily pipeline, the box pulling main,
+     a scrape/extract, N days of data): do NOT wait for it here. No timers, wakeups, cron entries,
+     background polling loops or "I'll check back". Move the ticket to `Monitoring` and write
+     the step into a `## Monitoring Exit Checklist` section of the ticket **description**
+     (metrics-review runs every item under that heading). Each item gets the exact command or
+     SQL, when it becomes readable, its gates (code present on the box, box idle, cost cap,
+     never `--skip-build-check`), and, if it performs an action, a line saying the user
+     authorized it. Never edit the metrics-review task itself for one ticket.
+
+   This rule has been restated by the user several times (NEX-915 10-02, NEX-966 10-26,
+   NEX-971 10-27). The tell is any sentence like "after the 10:00 run I'll…": that sentence
+   belongs in the checklist, not in your plan.
 
 11. **Report completion:** Confirm to user: PR merged, deploy verified, AC audit posted, Linear state set, worktree cleaned. If the ticket went to `Monitoring`, say which metric is being watched and roughly when it should be readable.
 
