@@ -5,7 +5,8 @@
   "permissions": {
     "defaultMode": "auto",
     "allow": [
-      "Bash(infra/lightsail/prod-run.sh *)"
+      "Bash(infra/lightsail/prod-run.sh *)",
+      "Bash(ssh -i ~/.ssh/nextbest_box_read boxread@3.18.29.227 *)"
     ]
   },
   "model": "opus[1m]",
