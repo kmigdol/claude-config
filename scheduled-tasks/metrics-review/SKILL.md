@@ -67,7 +67,32 @@ The distinction, because it is easy to blur:
 
 ## What to do
 
-1. **Find the tickets.** `mcp__linear-server__list_issues` with `team: "Nextbest"`, `state: "Monitoring"`. If none, post nothing anywhere and reply with one line: "No tickets in Monitoring." Then stop.
+0. **Check the production alerts — every run, before the tickets, even when Monitoring is empty.** These alerts are standing infrastructure, not any one ticket's observable, so this step never depends on a ticket list. Use the PostHog MCP `exec` tool (`mcp__a1b28c81-1281-4eee-a940-e5db946cc335__exec`; load it with ToolSearch "posthog exec").
+
+   a. **`call alerts-list {}`** — the insight alerts, which email Kayleigh. For each one report `name`, `state`, `last_checked_at`, `last_notified_at`, `last_value`. Flag:
+      - **Firing**, or notified in the last 24h → say what it means, using the alert's insight description.
+      - **Not evaluating:** `enabled: false`, or `last_checked_at` older than twice its `calculation_interval` (hourly → 2h, daily → 48h, weekly → 14d). A dead alert reads exactly like a quiet one. That is the finding.
+      - **`last_value` contradicts the state:** a value past the threshold with `state: Not firing`.
+
+   b. **`call error-tracking-alerts-list {}`** — per-issue error-tracking destinations (HogFunctions on `$error_tracking_issue_*`). There are none as of 2026-10-30: PostHog can't email them, and there is no Slack. If any exist, report `enabled` and `status.state`.
+
+   c. **Read what the error alert is counting.** "Errors in PostHog Error Tracking yesterday" (insight `wnCqioGl`, NEX-1013) fires on any `$exception` the previous day, so it fires on most days. The email alone says nothing. Break yesterday down:
+
+      ```sql
+      select properties.source src, properties.$exception_types t, properties.stage st,
+             properties.$exception_issue_id issue, count() n, min(timestamp) first_seen
+      from events
+      where event = '$exception' and timestamp >= today() - 1 and timestamp < today()
+      group by src, t, st, issue order by n desc limit 25
+      ```
+
+      Then mark which issues are **new**: their first `$exception` in the last 30 days fell yesterday. Use `select properties.$exception_issue_id issue, min(timestamp) from events where event = '$exception' and timestamp > now() - interval 30 day group by issue`. Lead with new issues and any issue whose count jumped. Recurring known noise gets one line. `source` is `pipeline`, `frontend-client` or `frontend-server`. A null `source` means a client event from before PR #1160 tagged them. `layer-c-probe` is the 2026-10-29 test probe, which is noise.
+
+   d. **Box health is part of this.** The three "Pipeline box: …" alerts (NEX-1012) cover the daily run. If one is firing, read the run with the Lightsail `boxread` commands in step 3 before reporting it.
+
+   e. **Report it as a "Production alerts" section at the top of the digest**: one line per alert, then new/jumped error issues with their PostHog issue link (`https://us.posthog.com/project/349365/error_tracking/<issue id>`). This stays report-only, like everything else here. Never resolve, suppress or snooze an issue or alert, and never edit an alert. A new error issue that looks real goes through the hand-off in "Spin deeper investigation out" above, and is never folded into an unrelated ticket's comment.
+
+1. **Find the tickets.** `mcp__linear-server__list_issues` with `team: "Nextbest"`, `state: "Monitoring"`. If none, post nothing on Linear and reply with the step-0 "Production alerts" section plus one line: "No tickets in Monitoring." Then stop.
 
    🚨 **There are TWO Linear MCP servers, and `linear-server` is the one that keeps failing auth.** The other is UUID-named — `mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__*` — exposes the same tools against the same workspace, and has been live on every occasion `linear-server` was not (2026-08-22, 08-26, 08-28, 08-31). **The string "linear" appears NOWHERE in its tool names**, so searching for "linear" returns nothing and it looks like Linear is simply unavailable.
 
@@ -225,7 +250,7 @@ where id in ('0092a7da-1c00-469d-8875-a20b2ed7b9c0','dce9d240-86d6-4019-9d47-ca1
 
 ### Step 1 — the digest (always)
 
-Reply with a short digest: one line per ticket (identifier, direction, recommendation), then a short section naming only the tickets that need a decision. Note explicitly if you posted no comments and why.
+Reply with a short digest: the step-0 "Production alerts" section first, then one line per ticket (identifier, direction, recommendation), then a short section naming only the tickets that need a decision. Note explicitly if you posted no comments and why.
 
 The digest is the whole deliverable for an unattended run. Stop there.
 
