@@ -7,5 +7,22 @@
   "seenNotifications": {},
   "hasResetAutoModeOptInForDefaultOffer": true,
   "migrationVersion": 14,
-  "userID": "289e7f1d335874a17b57a64c36c087953f0e91393f278e4ae7e6cf4a24cd3e15"
+  "userID": "289e7f1d335874a17b57a64c36c087953f0e91393f278e4ae7e6cf4a24cd3e15",
+  "pluginUsage": {
+    "cc-plugin-agents-md@builtin": {
+      "usageCount": 0,
+      "lastUsedAt": 1792098957811,
+      "lastUsedNumStartups": 0
+    },
+    "cc-plugin-plugin-authoring@builtin": {
+      "usageCount": 0,
+      "lastUsedAt": 1792098957811,
+      "lastUsedNumStartups": 0
+    },
+    "cc-plugin-diff@builtin": {
+      "usageCount": 0,
+      "lastUsedAt": 1792098957811,
+      "lastUsedNumStartups": 0
+    }
+  }
 }
