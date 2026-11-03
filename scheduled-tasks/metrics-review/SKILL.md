@@ -136,24 +136,8 @@ where id in ('0092a7da-1c00-469d-8875-a20b2ed7b9c0','dce9d240-86d6-4019-9d47-ca1
 
 **Remove this entry when:** either row is no longer `pending`, or Kayleigh says to stop watching.
 
-#### NEX-896 — queue the recrawl-latency session (on or after 2026-11-03)
+*(Previously armed and retired: the NEX-896 recrawl-latency hand-off, armed 2026-11-02 and removed 2026-11-03 — the spawn_task "Re-read NEX-896 recrawl latency on the 30-URL sample" was queued on the 11-03 run, and a comment saying so was posted on NEX-896.)*
 
-*Armed 2026-11-02. Kayleigh asked for it in the live walkthrough.* NEX-896's last two ACs need a Chrome session. AC 6 is a URL Inspection re-read of the 30-URL baseline sample, which is in NEX-829's 09-28 comment. AC 3 is the observed half: did NEX-1029's ~10-28 `/alternatives` title change move `content_changed_at` exactly once for the affected URLs? That is too big for this review (the bright line), so **this review queues it with `spawn_task`, and does not run it.**
-
-**How to do it:** on the first run dated 2026-11-03 or later, call `spawn_task`.
-- Title: "Re-read NEX-896 recrawl latency on the 30-URL sample".
-- Prompt must tell that session to:
-  - Run GSC URL Inspection on the same 30 URLs through `claude-in-chrome` (property `sc-domain:nextbest.one`). Record last crawl against each URL's sitemap lastmod. Report the median days since last crawl (baseline 37), the median lastmod→crawl gap for URLs whose lastmod moved after 10-06, and the count still not recrawled.
-  - Flag URLs that were in the 10-27 → 10-30 IndexNow bursts.
-  - Check AC 3 using `indexnow_runs.part_changes`.
-  - Never click Request Indexing.
-  - Post one comment on NEX-896 and tick the boxes the evidence supports, with labels `["SEO","Improvement"]`.
-  - Leave the ticket state alone.
-- Name the UUID Linear connector `mcp__5afa51ff-6015-498e-9e18-a1d1d62866c2__*` in the prompt.
-
-Then post a one-line comment on NEX-896 saying the session was queued. Mention it in the digest under the tickets that need a decision, as "click the NEX-896 chip".
-
-**Remove this entry when:** the `spawn_task` call has succeeded once.
 
 *(Previously armed and retired: the NEX-823 sweep-null hand-check, armed 2026-09-23 and removed 2026-10-13 — the 10-13 sweep visited 0 rows ("0 pending proposal(s) with a leg-0 ASIN"), 0 retired rows, every null since 09-23 hand-checked (one wrong null, Bliss `0092a7da`, restored 10-09 and held). Kayleigh closed NEX-823 in the live session with AC 3 read down. The `creators_dp_recheck` sweep still runs daily; only this review's inspection of its nulls stopped.)*
 
