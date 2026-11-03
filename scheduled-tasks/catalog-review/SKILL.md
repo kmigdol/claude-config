@@ -1,9 +1,9 @@
 ---
 name: catalog-review
-description: Weekday catalog run: first triages the most-discussed unmatched Reddit names and files the real products/tags as pending proposals (NEX-935), then researches pending alias_flag, new_product, duplicate_product, new_tag, new_brand and tag_alias_flag proposals with parallel web agents, plus INCI and buy-link lanes; replies with a digest that leads with a "New from Reddit" report. Never changes a proposal's status unattended; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
+description: Weekday catalog run: first triages the most-discussed unmatched Reddit names and files the real products/tags as pending proposals (NEX-935), then researches pending alias_flag, new_product, duplicate_product, new_tag, new_brand and tag_alias_flag proposals with parallel web agents, plus INCI and buy-link lanes; replies with a digest that leads with a "New from Reddit" report and an "Added automatically" block. Never changes a proposal's status unattended except NEX-936's auto-approve of clear-cut new products; when Kayleigh is present it walks her through the decision classes and applies only what she approves.
 ---
 
-Daily catalog audit for the nextbest taxonomy proposal queue. It first triages the most-discussed Reddit names the catalog cannot match and files the real ones as pending proposals (NEX-935, Step 0), then researches pending proposals with parallel web-research agents, writes the verdicts into each proposal's own dossier fields, and reports a digest that leads with a "New from Reddit" report. **You must never change a proposal's status** — filing a pending row and skipping a junk name are the only unattended writes beyond research.
+Daily catalog audit for the nextbest taxonomy proposal queue. It first triages the most-discussed Reddit names the catalog cannot match and files the real ones as pending proposals (NEX-935, Step 0), then researches pending proposals with parallel web-research agents, writes the verdicts into each proposal's own dossier fields, and reports a digest that leads with a "New from Reddit" report. **You must never change a proposal's status** — filing a pending row and skipping a junk name are the only unattended writes beyond research — **with one exception: step 6c's `auto-approve` of clear-cut new products (NEX-936)**, each of which the digest lists under "Added automatically" with its revert line.
 
 Follow `.claude/skills/catalog-audit/SKILL.md` in the repo at `/Users/kayleigh/dev/nextbest` —
 the **MAIN checkout**, not a worktree. That file is the authority on the helper's flags, the
@@ -20,6 +20,11 @@ routine — this line overrides them.
 **Never run `apply`. Never change any proposal's status. Never approve, reject, merge, delete,
 promote or reassign anything.** `apply` is the only command that resolves a proposal, and it runs
 only in the walkthrough, only on Kayleigh's explicit "approve `<class>`" for a class she named.
+
+**The one exception (NEX-936, Kayleigh 2026-11-02): step 6c's `proposal-queue.ts auto-approve`.** It
+approves only the new products its own fail-closed gate calls clear-cut, through the admin approve
+route. Run exactly step 6c's two lines — never `apply`, never `--limit`, never a decisions file, never
+`revert`. Every product it approves goes in the digest's **Added automatically** block.
 
 **Step 0 (triage, NEX-935) FILES and SKIPS, which is not deciding:** a filed row is a new
 `pending` proposal Kayleigh still approves in the walkthrough; a skip hides a junk name from
@@ -257,6 +262,21 @@ other lanes, then research and write it the same way.
      card on it has no `feed`. A denied or skipped step is not a failure: run it. Pass
      `--feed-unavailable "<error>"` only when the step ran and failed with that error.
 
+6c. **Auto-approve clear-cut new products (NEX-936).** Runs after every `write-research` above.
+   First check it is deployed: `grep -c "cmdAutoApprove" /Users/kayleigh/dev/nextbest/frontend/scripts/proposal-queue.ts`.
+   **0 means the PR is not on main yet:
+   skip this step and put `auto-approve: not deployed yet` in the digest.** Otherwise follow
+   routine-prompt.md step 5e exactly:
+   ```bash
+   cd /Users/kayleigh/dev/nextbest/frontend && npx -y tsx scripts/proposal-queue.ts auto-approve --base-url https://www.nextbest.one --env .env.prod --ledger /private/tmp/catalog-audit-<date>/auto-approve.ledger.json
+   cd /Users/kayleigh/dev/nextbest/frontend && npx -y tsx scripts/proposal-queue.ts auto-approve --base-url https://www.nextbest.one --env .env.prod --ledger /private/tmp/catalog-audit-<date>/auto-approve.ledger.json --apply
+   ```
+   Read the dry run first; a non-zero exit skips `--apply`. Keep both outputs: the summary line
+   (`qualifying N`), every `refused <code> <n>` line, and every `Brand · Name — revert: …` line go in
+   the digest verbatim. If the permission classifier blocks `--apply`, it is a **Blocked writes**
+   entry like any other, and the products go under "Would add automatically". A `disabled` line
+   (the off switch, `CATALOG_AUDIT_AUTO_APPROVE` in `frontend/.env.prod`) is fine: report it as is.
+
 7. **Read back what is now decidable**, per lane, with `--researched-only`, and group by
    `agent.decision_class` for the digest's class counts. This includes rows earlier runs researched
    and nobody has actioned yet — that backlog is exactly what the digest is for.
@@ -273,6 +293,13 @@ SKILL.md Step 3 has the template. The parts that are easy to get wrong:
   New products (filed / **refused** with the reason in plain words), Spellings of products we carry
   (→ our product), New tags (low confidence bolded), Spellings of tags we carry (grouped by target).
   Kayleigh asked to see every new product, brand and tag here before she approves anything.
+- **Added automatically (NEX-936) — right after the New from Reddit report, every run.** Heading
+  `### Added automatically (N)`, then one bullet per product step 6c approved, the
+  `Brand · Name — revert: …` line copied verbatim from the command's output, then the dry run's
+  `qualifying N` line and its `refused <code> <n>` lines so she can see why the rest were held.
+  `N = 0` still gets the block (one line: "nothing qualified" plus the refusal lines). A dry-run-only
+  day (blocked or failed `--apply`) heads it **Would add automatically** with no revert lines. If
+  step 6c was skipped, the block is the one skip line (`not deployed yet` / `disabled …`).
 - **Mondays: the Weekly gap report** block before Buy links, pasted unedited.
 - **Blocked writes — for Kayleigh to run:** every production write the classifier blocked, with
   its dry-run plan and the one-line command. Omit the block when empty.
