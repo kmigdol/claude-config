@@ -130,52 +130,9 @@ The distinction, because it is easy to blur:
 
 Run these IN ADDITION to the ticket's own observables. Each names its own removal condition — **delete the entry when that condition is met**; this list is not meant to accumulate.
 
-#### NEX-486 — approve the Pore Strips product line (the one write this review is allowed)
+*(Previously armed and retired: the NEX-486 Pore Strips approval check, armed 2026-11-05 and removed 2026-11-11 — the line was already approved 2026-11-06 22:15 UTC (not by this review); `/lines/pore-strips` 200 and the PDP block renders on a member line; Pore Strips is mentions-only with 0 members by design per Kayleigh's 11-10 correction. NEX-486 told it is ready for its AC audit.)*
 
-*Armed 2026-11-05. Kayleigh asked for this in chat ("have monitoring job do it").* NEX-486 is In Progress, not Monitoring, so this check runs on its own. All three PRs are merged, and both migrations are applied to prod:
-- PR 1 `0a41681`
-- PR 2 kmigdol/nextbest#1220 `7ce0ec7`: the `new_line_alias` action, the `line_rematch` effect, and the `line` kind in `proposal-queue.ts`
-- PR 3 kmigdol/nextbest#1221 `a05c13e`: the `/lines/[slug]` page, the PDP `product-line-block`, and `line_mention_counts()`
-
-Kayleigh **pre-approved approving the Bioré Pore Strips line** as the first product line. That approval covers this ONE decision, so it is an exception to "never change state" and to "never approve from the review". Approve nothing else.
-
-**Gate:** approve only after a 10:00 UTC daily run that finished with exit 0 on a sha that contains `7ce0ec7`. Check with `run-job.sh status` or the `pipeline_job_finished` event. Otherwise report `Pore Strips: waiting — <reason>` and change nothing.
-
-**Steps once the gate passes:**
-1. Find the Pore Strips line decision in the catalog-audit queue: the `line` kind, decision class `line:new`. Follow `.claude/skills/catalog-audit/SKILL.md`.
-2. Check its members are Bioré pore strip SKUs. If the decision is missing or its members look wrong, STOP and report what you saw.
-3. Approve it through `frontend/scripts/proposal-queue.ts`. Never call the `apply_proposal` RPC directly.
-4. Read prod (Supabase MCP, project `rfejgzsgzkfhnaynfjaq`):
-   - the `product_lines` row (id, slug);
-   - members whose `line_id` is set;
-   - the pending `line_rematch` row in `proposal_effects`.
-5. Post a NEX-486 Linear comment with what was approved and that evidence. Lead the digest with `Pore Strips line approved: /lines/<slug>`. Leave the ticket In Progress.
-
-**After approval, until the entry is deleted (report only):**
-- The `line_rematch` effect drains on the next 10:00 run. Then report the `line_mentions` count for the line.
-- After the next production build, report whether `https://www.nextbest.one/lines/<slug>` returns 200, and whether a member PDP contains `data-testid="product-line-block"`. The line shows only if it has 2+ carded members or 3+ line mentions. A 404 with fewer than both is expected, not a defect.
-
-**Delete this entry** when `/lines/<slug>` returns 200 and the PDP block renders. Then tell Kayleigh NEX-486 is ready for its AC audit.
-
-#### Bliss bundle — watch `0092a7da`'s attach count until it reaches the page floor
-
-*Armed 2026-10-09. Kayleigh asked for it. No ticket.* The Bliss brand (`dce9d240`) and its only product, Tri-Peptide Brightening Moisturizer (`0092a7da`), are ready to approve. Research is stamped `approve:new_brand`, the image is replaced, and Amazon `B082YKJ56W` is restored. The one thing blocking them is that a bundle product must have **≥3 predicted mentions** (a hard gate for a new brand's products), and this one reads 2. The daily run recounts it.
-
-```sql
-select id, proposal_type, status,
-       dossier_json->>'predicted_attach_count' as attach,
-       dossier_json->>'amazon_asin' as asin,
-       dossier_json->>'image_url' is not null or dossier_json->>'image_rehosted_url' is not null as has_image
-from taxonomy_proposals
-where id in ('0092a7da-1c00-469d-8875-a20b2ed7b9c0','dce9d240-86d6-4019-9d47-ca1ab0f6ffb6')
-```
-
-**How to read it:** report-only, one line: `Bliss bundle: attach N (needs 3)`. Read `attach`, `asin` and `has_image` from the **`new_product` row only**. The brand row always shows attach 0 and no image, and that is normal (verified 2026-10-09: product attach 2, ASIN B082YKJ56W, has_image true).
-- **When `attach >= 3`**, lead the digest with it: "Bliss is now approvable. Say 'approve Bliss' to send the bundle." Never approve it from the review.
-- **If the image or ASIN on `0092a7da` has gone null**, say so: something overwrote a reviewer decision.
-- **If either row has left `pending`**, report its new status.
-
-**Remove this entry when:** either row is no longer `pending`, or Kayleigh says to stop watching.
+*(Previously armed and retired: the Bliss bundle watch, armed 2026-10-09 and removed 2026-11-11 — both rows left `pending` and are now `held` (NEX-1092 watching / NEX-1098 brand-follow), product attach still 2, ASIN B082YKJ56W and image intact. The watching auto-release at 3 mentions now owns it.)*
 
 *(Previously armed and retired: the NEX-896 recrawl-latency hand-off, armed 2026-11-02 and removed 2026-11-03 — the spawn_task "Re-read NEX-896 recrawl latency on the 30-URL sample" was queued on the 11-03 run, and a comment saying so was posted on NEX-896.)*
 
