@@ -130,14 +130,6 @@ The distinction, because it is easy to blur:
 
 Run these IN ADDITION to the ticket's own observables. Each names its own removal condition — **delete the entry when that condition is met**; this list is not meant to accumulate.
 
-- **NEX-486 Effaclar line page (armed 2026-11-12). Runs even though NEX-486 is In Progress, not Monitoring.** The `effaclar` line (`f396074b-ea8c-44fb-8127-318144a911f7`, 12 members) was created 2026-11-12 ~20:40 UTC; its `line_rematch` effect drains in the next daily run. **Gate:** first read the box's last `daily-pipeline` run (`run-job.sh status` or the latest `pipeline_job_finished` event): it must have finished AFTER 2026-11-12 20:40 UTC. If not, report "gate not met" and read nothing else. Then report each separately:
-  1. `select status from proposal_effects where proposal_id = 'e539ca65-278d-470d-801a-0b076a782e85'` is `done`.
-  2. `select count(*) from line_mentions where line_id = 'f396074b-ea8c-44fb-8127-318144a911f7'` > 0 (the 64+ bare "Effaclar" threads).
-  3. `curl -s -o /dev/null -w '%{http_code}' https://www.nextbest.one/lines/effaclar` is 200 (a 404 right after the run can be the ISR/build lag, see the `project_buy_link_rendering` memory; re-read next run before calling it a defect).
-  4. A carded member PDP, e.g. `/products/la-roche-posay-effaclar-duo`, contains `data-testid="product-line-block"`.
-  5. Status only, not a gate: proposal `aa2134e4-cadc-428e-b176-48a8af21d9b2` (Effaclar A.Z. Gel, line member) — pending / approved (then `products.line_id` should be the line).
-  **Remove when** 1–4 all pass. Then comment on NEX-486 that AC 1 is met and that it is ready for its AC audit (Kayleigh decides Done; no behavioural metric is named, so not Monitoring).
-
 *(Previously armed and retired: the NEX-486 Pore Strips approval check, armed 2026-11-05 and removed 2026-11-11 — the line was already approved 2026-11-06 22:15 UTC (not by this review); `/lines/pore-strips` 200 and the PDP block renders on a member line; Pore Strips is mentions-only with 0 members by design per Kayleigh's 11-10 correction. NEX-486 told it is ready for its AC audit.)*
 
 *(Previously armed and retired: the Bliss bundle watch, armed 2026-10-09 and removed 2026-11-11 — both rows left `pending` and are now `held` (NEX-1092 watching / NEX-1098 brand-follow), product attach still 2, ASIN B082YKJ56W and image intact. The watching auto-release at 3 mentions now owns it.)*
