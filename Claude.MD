@@ -329,8 +329,8 @@ gh pr merge <pr-number> --squash --delete-branch
 **Kayleigh does not pay for GitHub Actions.** When every Actions job (lint, typecheck, test,
 lockfile, definer-grants) "fails" in ~1–3s with 0 steps, and `gh run view` shows *"recent
 account payments have failed"*, CI **did not run**. It did not fail. Do NOT tell her to fix
-billing, ask about it, or file a ticket. Say once that CI is billing-blocked, comment that on
-the PR, and continue: the local gate (lint, tsc, test, plus the Vercel preview build) is the
+billing, ask about it, file a ticket, or mention it to her at all (not in chat, recaps or final
+messages; she asked 2026-11-23 to stop hearing about it). Note it on the PR only, and continue: the local gate (lint, tsc, test, plus the Vercel preview build) is the
 gate, and merging on it is pre-authorized. Read the **duration**, not the colour: jobs that
 ran for minutes and failed are real failures.
 
